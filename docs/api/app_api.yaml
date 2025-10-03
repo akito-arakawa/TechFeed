@@ -1,0 +1,223 @@
+openapi: "3.0.3"
+
+info:
+  title: "TechFeed API"
+  description: "TechFeedのAPI仕様書"
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:8001/api/v1
+    description: Local server
+
+tags:
+  - name: authentication
+  - name: home
+  - name: article
+
+paths:
+  "/signup":
+    post:
+      tags:
+        - authentication
+      summary: 新規登録
+      description: |
+        ユーザの新規登録を行う。
+        登録に成功した場合は自動でログインを行う。
+      requestBody:
+        $ref: "#/components/requestBodies/PostSignupPayload"
+      responses:
+        200:
+          $ref: "#/components/responses/PostSignupResponse"
+        400:
+          $ref: "#/components/responses/PostSignup400Response"
+        500:
+          $ref: "#/components/responses/ServerError"
+  "/login":
+    post:
+      tags:
+        - authentication
+      summary: ログイン
+      description: |
+        ユーザのログイン処理を行い、セッションを確立する
+      requestBody:
+        $ref: "#/components/requestBodies/PostLoginPayload"
+      responses:
+        200:
+          $ref: "#/components/responses/PostLoginResponse"
+        400:
+          $ref: "#/components/responses/PostLogin400Response"
+        500:
+          $ref: "#/components/responses/ServerError"
+  "/logout":
+    post:
+      tags:
+        - authentication
+      summary: ログアウト
+      description: ユーザとのセッションを破棄する
+      security:
+        - ApiKeyAuth: []
+components:
+  schemas:
+    AccessToken:
+      type: string
+      description: アクセストークン
+      nullable: false
+      example: eA342fre34fe21ffse
+    RefreshToken:
+      type: string
+      description: リフレッシュトークン
+      nullable: false
+      example: eA342fre34fe21ffse
+    LoginId:
+      type: string
+      description: |
+        ユーザID
+        - 1文字以上15文字以下
+        - 半角英数字のみ使用可能
+      minLength: 1
+      maxLength: 15
+      pattern: ^[0-9a-zA-Z_]{1, 15}$
+      nullable: false
+      example: example
+    Email:
+      type: string
+      description: メールアドレス
+      nullable: false
+      format: email              
+      maxLength: 254
+      pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
+      example: example@example.com
+    Password:
+      type: string
+      description: |
+        パスワード
+        - 8文字以上
+        - 半角英数字が使用可能
+      pattern: ^[a-zA-Z0-9]{8,}$
+      minLength: 8
+      nullable: false
+      example: passowrd
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: エラーコード
+          nullable: false
+        description:
+          type: string
+          description: エラーメッセージ
+          nullable: false
+      required:
+        - code
+        - description
+  requestBodies:
+    PostSignupPayload:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              login_id:
+                $ref: "#/components/schemas/LoginId"
+              email:
+                $ref: "#/components/schemas/Email"
+              password:
+                $ref: "#/components/schemas/Password"
+            required:
+              - login_id
+              - email
+              - passowrd
+    PostLoginPayload:
+      content:
+        application/json:
+          schema: 
+            type: object
+            properties:
+              login_id:
+                $ref: "#/components/schemas/LoginId"
+              password:
+                $ref: "#/components/schemas/Password"
+            required:
+              - login_id
+              - password
+  responses:
+    PostSignupResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              accessToken:
+                $ref: "#/components/schemas/AccessToken"
+              refreshToken:
+                $ref: "#/components/schemas/RefreshToken"
+            required:
+              - accessToken
+              - refreshToken
+    PostSignup400Response:
+      description: |
+        Bad Request
+        ※ examples には返却されうるエラー例を示す。実際には条件に一致したエラーのみ返却。
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              errors:
+                type: array
+                items: 
+                  $ref: "#/components/schemas/Error"
+                example:
+                  - code: post_signup_id_already_used
+                    description: 既に使用されているIDです
+                  - code: post_signup_id_invalid_length
+                    description: 半角英数1〜15文字以内で入力してください
+                  - code: post_signup_id_invalid_characters
+                    description: 半角英数以外は使用できません
+                  - code: post_signup_password_invalid_length
+                    description: 半角英数8以上で入力してください
+                  - code: post_signup_password_invalid_characters
+                    description: そのパスワードは使用できません
+                  - code: post_signup_email_invalid_format
+                    description: メールアドレスの形式が不正です 
+            required:
+              - errors
+    PostLoginResponse:
+      description: OK
+      content:
+        application/json:
+          schema: 
+            type: object
+            properties:
+              accessToken:
+                $ref: "#/components/schemas/AccessToken"
+              refreshToken:
+                $ref: "#/components/schemas/RefreshToken"
+            required:
+              - accessToken
+              - refreshToken
+    PostLogin400Response:
+      description: |
+        Bad Request
+        ※ 常にexmapleの内容を返す
+      content:
+        application/json:
+          schema: 
+            type: object
+            properties:
+              errors:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Error"
+                example:
+                  - code: Invalid_id_or_password    
+                    description: IDまたはpasswordが違います
+            required:
+              - errors
+    ServerError:
+      description: サーバー側のエラーです
+
+            
+    
