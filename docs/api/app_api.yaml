@@ -1,0 +1,541 @@
+openapi: "3.0.3"
+
+info:
+  title: "TechFeed API"
+  description: "TechFeedのAPI仕様書"
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:8001/api/v1
+    description: Local server
+
+tags:
+  - name: authentication
+  - name: home
+  - name: article
+  - name: category
+  - name: mypage
+paths:
+  "/signup":
+    post:
+      tags:
+        - authentication
+      summary: 新規登録
+      description: |
+        ユーザの新規登録を行う。
+        登録に成功した場合は自動でログインを行う。
+      requestBody:
+        $ref: "#/components/requestBodies/PostSignupPayload"
+      responses:
+        200:
+          $ref: "#/components/responses/PostSignupResponse"
+        400:
+          $ref: "#/components/responses/PostSignup400Response"
+        500:
+          $ref: "#/components/responses/ServerError"
+  "/login":
+    post:
+      tags:
+        - authentication
+      summary: ログイン
+      description: |
+        ユーザのログイン処理を行い、セッションを確立する
+      requestBody:
+        $ref: "#/components/requestBodies/PostLoginPayload"
+      responses:
+        200:
+          $ref: "#/components/responses/PostLoginResponse"
+        400:
+          $ref: "#/components/responses/PostLogin400Response"
+        500:
+          $ref: "#/components/responses/ServerError"
+  "/logout":
+    post:
+      tags:
+        - authentication
+      summary: ログアウト
+      description: ユーザとのセッションを破棄する
+      security:
+        - ApiKeyAuth: []
+      responses:
+        200: 
+          $ref: "#/components/responses/Success"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        500:
+          $ref: "#/components/responses/ServerError"
+  "/home":
+    get:
+      tags:
+        - home
+      summary: ホーム画面
+      description: |
+        おすすめ記事・人気記事・最新記事が参照できる。<br>
+        ログインすると記事にいい値が付けれたり、自分に合った記事がおすすめ記事に流れてくる(ログインしていないユーザは人気記事を被らないようにおすすめ記事を表示)
+      responses:
+        200: 
+          $ref: "#/components/responses/GetHome200Response"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        500:
+          $ref: "#/components/responses/ServerError"
+  "/articles/search":
+    get: 
+      tags:
+        - article
+      summary: 検索画面
+      description: 自分の見たい記事を検索で絞り込みができる
+      parameters: 
+        - in: query
+          name: keyword
+          schema: { type: string, minLength: 0}
+          description: 検索文字列
+          required: false
+        - in: query
+          name: category
+          schema: { type: string, minLength: 0, default: all}
+          description: カテゴリ検索
+          required: false
+        - in: query
+          name: sort
+          schema: { type: string, minLength: 0, default: postDate}
+          description: |
+            投稿日orいいね<br>
+            投稿日の場合はpostDateで、いいねの場合はlikeでソート
+          required: false
+      responses:
+        200:
+          $ref: "#/components/responses/GetArticles200Response"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        500:
+          $ref: "#/components/responses/ServerError"
+
+  "/articles/{id}/like":
+    post:
+      tags: 
+        - article
+      summary: いいねする
+      description: いいね機能
+      responses:
+        200: 
+          $ref: "#/components/responses/Success"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        500:
+          $ref: "#/components/responses/ServerError"
+    delete:
+      tags:
+        - article
+      summary: いいね解除
+      description: いいね解除機能
+      responses:
+        200: 
+          $ref: "#/components/responses/Success"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        500:
+          $ref: "#/components/responses/ServerError"
+  "/articles/{id}/view":
+    post: 
+      tags:
+        - article
+      summary: 閲覧記録
+      description: 閲覧記録
+      responses:
+        200: 
+          $ref: "#/components/responses/Success"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        500:
+          $ref: "#/components/responses/ServerError"
+  "/categories":
+    get: 
+      tags:
+        - category
+      summary: カテゴリ一覧
+      description: カテゴリを一覧表示。(Javascript, Java)
+      responses:
+        200: 
+          $ref: "#/components/responses/GetCategory200Response"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        500:
+          $ref: "#/components/responses/ServerError"
+  "/categories/{slug}":
+    get:
+      tags:
+        - category
+      summary: カテゴリごとの記事一覧表示
+      description: カテゴリごとの一覧表示
+      parameters: 
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 0, default: 0}
+          description: 0始まりのページ
+      responses:
+        200: 
+          $ref: "#/components/responses/GetArticles200Response"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        500:
+          $ref: "#/components/responses/ServerError"
+  "/me/likes":
+    get:
+      tags: 
+        - mypage
+      summary: 自分のいいね一覧
+      parameters: 
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 0, default: 0}
+          description: 0始まりのページ
+      responses:
+        200:
+          $ref: "#/components/responses/GetArticles200Response"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        500:
+          $ref: "#/components/responses/ServerError"
+  "/me/views":
+    get: 
+      tags: 
+        - mypage
+      summary: 自分の閲覧履歴
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 0, default: 0}
+          description: 0始まりのページ
+      responses:
+        200: 
+          $ref: "#/components/responses/GetArticles200Response"
+        400:
+          $ref: "#/components/responses/BadRequest"
+        500:
+          $ref: "#/components/responses/ServerError"
+      
+components:
+  schemas:
+    SuccessMessage: 
+      type: string
+      description: レスポンスを空にしないようにするため
+      nullable: false
+      example: success
+    AccessToken:
+      type: string
+      description: アクセストークン
+      nullable: false
+      example: eA342fre34fe21ffse
+    RefreshToken:
+      type: string
+      description: リフレッシュトークン
+      nullable: false
+      example: eA342fre34fe21ffse
+    LoginId:
+      type: string
+      description: |
+        ユーザID
+        - 1文字以上15文字以下
+        - 半角英数字のみ使用可能
+      minLength: 1
+      maxLength: 15
+      pattern: ^[0-9a-zA-Z_]{1, 15}$
+      nullable: false
+      example: example
+    Email:
+      type: string
+      description: メールアドレス
+      nullable: false
+      format: email              
+      maxLength: 254
+      pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
+      example: example@example.com
+    Password:
+      type: string
+      description: |
+        パスワード
+        - 8文字以上
+        - 半角英数字が使用可能
+      pattern: ^[a-zA-Z0-9]{8,}$
+      minLength: 8
+      nullable: false
+      example: passowrd
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: エラーコード
+          nullable: false
+        description:
+          type: string
+          description: エラーメッセージ
+          nullable: false
+      required:
+        - code
+        - description
+    Key:
+      type: string
+      enum: [recommended, popular, new]
+      example: popular
+    Title:
+      type: string
+      example: 人気記事
+    Section:
+      type: object
+      properties:
+        key: 
+          $ref: "#/components/schemas/Key"
+        title:
+          $ref: "#/components/schemas/Title"
+        items: 
+          type: array
+          items: 
+            $ref: "#/components/schemas/Article"
+    Article:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 123
+        title: 
+          type: string
+          example: React 18の新機能まとめ
+        summary:
+          type: string
+          example: React 18の新機能まとめ解説
+        url:
+          type: string
+          format: uri
+          example: https://zenn.dev/articles/react18-feature
+        source:
+          type: object
+          properties:
+            id: 
+              type: integer
+              example: 2
+            name: 
+              type: string
+              example: Zenn
+        thumbnaiUrl:
+          type: string
+          format: uri
+          example: https://zenn.dev/ogp/react18.png
+        categories:
+          type: array
+          items:
+            type: string
+          example: ["React", "JavaScript"]
+        likeCount:
+          type: integer
+          example: 120
+          nullable: true
+        userState:
+          type: object
+          nullable: true
+          properties:
+            liked: { type: boolean }
+            saved: { type: boolean }
+        publishedAt:
+          type: string
+          format: date-time
+    Categories:
+      type: object
+      properties:
+        id: 
+          $ref: "#/components/schemas/CategoryId"
+        name:
+          $ref: "#/components/schemas/CategoryName"
+        slug:
+          $ref: "#/components/schemas/CategorySlug"
+    CategoryId:
+      type: string
+      example: 1
+    CategoryName: 
+      type: string
+      example: JavaScript
+    CategorySlug:
+      type: string
+      example: javascript
+          
+  requestBodies:
+    PostSignupPayload:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              login_id:
+                $ref: "#/components/schemas/LoginId"
+              email:
+                $ref: "#/components/schemas/Email"
+              password:
+                $ref: "#/components/schemas/Password"
+            required:
+              - login_id
+              - email
+              - passowrd
+    PostLoginPayload:
+      content:
+        application/json:
+          schema: 
+            type: object
+            properties:
+              login_id:
+                $ref: "#/components/schemas/LoginId"
+              password:
+                $ref: "#/components/schemas/Password"
+            required:
+              - login_id
+              - password
+  responses:
+    Success:
+      description: success
+      content:
+        application/json:
+          schema: 
+            type: object
+            properties:
+              message:
+                $ref: "#/components/schemas/SuccessMessage"
+            required:
+              - message
+    PostSignupResponse:
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              accessToken:
+                $ref: "#/components/schemas/AccessToken"
+              refreshToken:
+                $ref: "#/components/schemas/RefreshToken"
+            required:
+              - accessToken
+              - refreshToken
+    PostSignup400Response:
+      description: |
+        Bad Request
+        ※ examples には返却されうるエラー例を示す。実際には条件に一致したエラーのみ返却。
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              errors:
+                type: array
+                items: 
+                  $ref: "#/components/schemas/Error"
+                example:
+                  - code: post_signup_id_already_used
+                    description: 既に使用されているIDです
+                  - code: post_signup_id_invalid_length
+                    description: 半角英数1〜15文字以内で入力してください
+                  - code: post_signup_id_invalid_characters
+                    description: 半角英数以外は使用できません
+                  - code: post_signup_password_invalid_length
+                    description: 半角英数8以上で入力してください
+                  - code: post_signup_password_invalid_characters
+                    description: そのパスワードは使用できません
+                  - code: post_signup_email_invalid_format
+                    description: メールアドレスの形式が不正です 
+            required:
+              - errors
+    PostLoginResponse:
+      description: OK
+      content:
+        application/json:
+          schema: 
+            type: object
+            properties:
+              accessToken:
+                $ref: "#/components/schemas/AccessToken"
+              refreshToken:
+                $ref: "#/components/schemas/RefreshToken"
+            required:
+              - accessToken
+              - refreshToken
+    PostLogin400Response:
+      description: |
+        Bad Request
+        ※ 常にexmapleの内容を返す
+      content:
+        application/json:
+          schema: 
+            type: object
+            properties:
+              errors:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Error"
+                example:
+                  - code: Invalid_id_or_password    
+                    description: IDまたはpasswordが違います
+            required:
+              - errors
+    GetHome200Response:
+      description: ホーム画面データの取得成功
+      content:
+        application/json:
+          schema: 
+            type: object
+            properties:
+              serverTime:
+                type: string
+                format: date-time
+                example: "2025-10-05T12:00:00Z"
+              sections: 
+                type: array
+                description: セクションごとの記事リスト
+                items:
+                  $ref: "#/components/schemas/Section"
+    GetCategory200Response:
+      description: カテゴリ画面データを取得成功
+      content:
+        application/json:
+          schema: 
+            type: object
+            properties:
+              categories:
+                type: array
+                description: カテゴリ一覧を返す
+                items:
+                  $ref: "#/components/schemas/Categories"
+    GetArticles200Response:
+      description: 記事一覧返却
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              serverTime:
+                type: string
+                format: date-time
+                example: "2025-10-05T12:00:00Z"
+              items:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Article"
+    
+       
+    BadRequest:
+      description: 不正なリクエスト時に返す。汎用的エラー
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              errors:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Error"
+                example:
+                  - code: invalid
+                    description: リクエストが不正です
+    ServerError:
+      description: サーバー側のエラーです
+
+            
+    
