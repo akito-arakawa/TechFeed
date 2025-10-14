@@ -117,6 +117,8 @@ paths:
         - article
       summary: いいねする
       description: いいね機能
+      security:
+        - ApiKeyAuth: []
       responses:
         200: 
           $ref: "#/components/responses/Success"
@@ -129,6 +131,8 @@ paths:
         - article
       summary: いいね解除
       description: いいね解除機能
+      security:
+        - ApiKeyAuth: []
       responses:
         200: 
           $ref: "#/components/responses/Success"
@@ -185,6 +189,8 @@ paths:
       tags: 
         - mypage
       summary: 自分のいいね一覧
+      security:
+        - ApiKeyAuth: []
       parameters: 
         - in: query
           name: page
@@ -202,6 +208,8 @@ paths:
       tags: 
         - mypage
       summary: 自分の閲覧履歴
+      security:
+        - ApiKeyAuth: []
       parameters:
         - in: query
           name: page
@@ -222,14 +230,9 @@ components:
       description: レスポンスを空にしないようにするため
       nullable: false
       example: success
-    AccessToken:
+    Token:
       type: string
-      description: アクセストークン
-      nullable: false
-      example: eA342fre34fe21ffse
-    RefreshToken:
-      type: string
-      description: リフレッシュトークン
+      description: トークン
       nullable: false
       example: eA342fre34fe21ffse
     LoginId:
@@ -408,13 +411,10 @@ components:
           schema:
             type: object
             properties:
-              accessToken:
-                $ref: "#/components/schemas/AccessToken"
-              refreshToken:
-                $ref: "#/components/schemas/RefreshToken"
+              Token:
+                $ref: "#/components/schemas/Token"
             required:
-              - accessToken
-              - refreshToken
+              - Token
     PostSignup400Response:
       description: |
         Bad Request
@@ -450,13 +450,10 @@ components:
           schema: 
             type: object
             properties:
-              accessToken:
-                $ref: "#/components/schemas/AccessToken"
-              refreshToken:
-                $ref: "#/components/schemas/RefreshToken"
+              Token:
+                $ref: "#/components/schemas/Token"
             required:
-              - accessToken
-              - refreshToken
+              - Token
     PostLogin400Response:
       description: |
         Bad Request
