@@ -5,6 +5,8 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\UserToken;
+use Symfony\Component\HttpFoundation\Response;
 
 class AuthToken
 {
@@ -15,24 +17,33 @@ class AuthToken
      * @param  \Closure(\Illuminate\Http\Request): (\Illuminate\Http\Response|\Illuminate\Http\RedirectResponse)  $next
      * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
      */
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next): Response
     {
-        // AuthorizationヘッダーのBearer tokenを取得
-        $token = $request->bearerToken();
+        $token = $request->bearerToken(); // AuthorizationヘッダーのBearerトークンを取得
 
-        if (! $token) {
-            return response()->json(['message'=> 'Token missing'], 401);
+        if (!$token) {
+            return response()->json(['message' => 'Token missing'], 401);
         }
 
-        // DBのハッシュと比較
-        $user = User::where('api_token', hash('sha256', $token))->first();
+        // user_tokensテーブルからトークンを検索（有効期限チェック付き）
+        $userToken = UserToken::where('token', $token)
+            ->where('expiration_time', '>', now())
+            ->first();
 
-        if (! $user) {
-            return response()->json(['message' => 'Invalid token'], 401);
+        if (!$userToken) {
+            return response()->json(['message' => 'Invalid or expired token'], 401);
         }
 
-        // 認証成功 → user をログイン扱いにする
-        auth()->login($user);
+        // トークンに紐づくユーザーを取得
+        $user = User::find($userToken->user_id);
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+        auth()->setUser($user);
+
+        // リクエストにユーザー情報をセット
+        $request->merge(['auth_user' => $user]);
 
         return $next($request);
     }
