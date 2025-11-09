@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Hash;
+use App\Models\UserToken;
 
 class User extends Authenticatable
 {
@@ -43,7 +44,13 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
-    public function createUser($name, $email, $password) {
+    public function user_token()
+    {
+        return $this->hasOne(UserToken::class);
+    }
+
+    public function createUser($name, $email, $password)
+    {
         $this->name = $name;
         $this->email = $email;
         $this->password = Hash::make($password);

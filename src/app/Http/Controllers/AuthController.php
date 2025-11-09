@@ -48,4 +48,9 @@ class AuthController extends Controller
             return response([], 500);
         }
     }
+
+    public function logout(Request $req) {
+        $req->user->user_token()->delete();
+        return ["message" => "ok"];
+    }
 }

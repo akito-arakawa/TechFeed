@@ -43,7 +43,7 @@ class AuthToken
         auth()->setUser($user);
 
         // リクエストにユーザー情報をセット
-        $request->merge(['auth_user' => $user]);
+        $request->merge(['user' => $user]);
 
         return $next($request);
     }

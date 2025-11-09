@@ -14,8 +14,7 @@ use App\Http\Controllers\AuthController;
 */
 
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/signup',[AuthController::class, 'signup']);
-
-Route::middleware('auth.token')->get('/me', function () {
-    return auth()->user();
+Route::post('/signup', [AuthController::class, 'signup']);
+Route::middleware('auth.token')->group(function () {
+    Route::post('logout', [AuthController::class, 'logout']);
 });
