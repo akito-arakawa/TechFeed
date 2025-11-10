@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('author_name', 100)->nullable();
             $table->string('thumbnail_url', 255)->nullable();
             $table->unsignedInteger('source_like_count')->default(0);
-            $table->timestamp('pubished_ad')->nullable();
+            $table->timestamp('pubished_at')->nullable();
             $table->timestamp('feched_at');
             $table->timestamps();
         });
