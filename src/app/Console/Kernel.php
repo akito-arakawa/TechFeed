@@ -15,7 +15,12 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->command('articles:fetch qiita:new')->daily();
+        $schedule->command('articles:fetch qiita:popular')->weekly();
+        $schedule->command('articles:fetch qiita:popular')->weekly();
+        $schedule->command('articles:fetch qiita:tag:react')->daily();
+        $schedule->command('articles:fetch qiita:tag:laravel')->daily();
+        $schedule->command('articles:fetch qiita:tag:javascrpit')->daily();
     }
 
     /**
@@ -25,7 +30,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands()
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }
