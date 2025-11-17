@@ -35,4 +35,8 @@ return [
         'default_thumbnail' => env('QIITA_THUMBNAIL', '/images/qiita.png'),
     ],
 
+    'zenn' => [
+        'default_thumbnail' => env('ZENN_THUMBNAIL', '/images/zeen.png'),
+    ]
+
 ];
