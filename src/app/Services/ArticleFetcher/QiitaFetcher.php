@@ -12,7 +12,7 @@ class QiitaFetcher
 
     public function __construct()
     {
-        $this->defaultQiitaThumbnail = asset('images/qiita.png');
+        $this->defaultQiitaThumbnail = url('images/qiita.png');
     }
 
     // 新着記事
@@ -28,14 +28,59 @@ class QiitaFetcher
     // 人気記事
     public function fetchPopular(): array
     {
-        return $this->fetchFromApi(
-            [
-                'page' => 1,
-                'per_page' => 20,
-                'query' => 'likes_count:>50',
-            ]
-        );
+        $new = 0;
+        $updated = 0;
+        $skipped = 0;
+        $source = Source::where('name', 'Qiita')->first();
+
+        $mergedItems = [];
+
+        // Qiita API は page 1〜100 まで
+        for ($page = 1; $page <= 50; $page++) {
+
+            $response = Http::get($this->baseUrl, [
+                'page' => $page,
+                'per_page' => 100,
+                // ストックが40以上のものだけを取得
+                'query' => 'stocks:>40',
+            ]);
+
+            if ($response->failed()) {
+                break;
+            }
+
+            $items = $response->json();
+            if (empty($items)) {
+                break; // これ以上記事がない
+            }
+
+            $mergedItems = array_merge($mergedItems, $items);
+        }
+
+        // まとめて保存
+        foreach ($mergedItems as $item) {
+            $article = Article::updateOrCreate(
+                [
+                    'source_id' => $source->id,
+                    'source_item_id' => $item['id'],
+                ],
+                [
+                    'url' => $item['url'],
+                    'title' => $item['title'],
+                    'author_name' => $item['user']['id'] ?? null,
+                    'thumbnail_url' => $this->defaultQiitaThumbnail,
+                    'source_like_count' => $item['likes_count'] ?? 0,
+                    'pubished_at' => $item['created_at'],
+                    'fetched_at' => now(),
+                ]
+            );
+
+            $article->wasRecentlyCreated ? $new++ : $updated++;
+        }
+
+        return [$new, $updated, $skipped];
     }
+
     // カテゴリ別記事
     public function fetchByTag(string $tag): array
     {
@@ -75,7 +120,7 @@ class QiitaFetcher
                     'author_name' => $item['user']['id'] ?? null,
                     'thumbnail_url' => $this->defaultQiitaThumbnail,
                     'source_like_count' => $item['likes_count'] ?? 0,
-                    'published_at' => $item['created_at'],
+                    'pubished_at' => $item['created_at'],
                     'fetched_at' => now(),
                 ]
             );

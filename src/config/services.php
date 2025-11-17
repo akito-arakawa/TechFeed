@@ -31,4 +31,8 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'qiita' => [
+        'default_thumbnail' => env('QIITA_THUMBNAIL', '/images/qiita.png'),
+    ],
+
 ];
