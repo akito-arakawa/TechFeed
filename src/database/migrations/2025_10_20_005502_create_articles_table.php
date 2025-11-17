@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('thumbnail_url', 255)->nullable();
             $table->unsignedInteger('source_like_count')->default(0);
             $table->timestamp('pubished_at')->nullable();
-            $table->timestamp('feched_at');
+            $table->timestamp('fetched_at');
             $table->timestamps();
         });
     }
