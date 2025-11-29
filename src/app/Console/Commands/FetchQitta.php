@@ -11,7 +11,7 @@ class FetchQitta extends Command
      *
      * @var string
      */
-    protected $signature = 'articles:fetch {target}';
+    protected $signature = 'fetch:qitta {type} {value?}';
 
     /**
      * The console command description.
@@ -27,27 +27,30 @@ class FetchQitta extends Command
      */
     public function handle(QiitaFetcher $qiita)
     {
-        $target = $this->argument('target');
+        $type = $this->argument('type');
+        $value = $this->argument('value');
 
-        switch ($target) {
-            case 'qiita:new':
-                [$new, $updated, $skipped] = $qiita->fetchNew();
+        switch ($type) {
+            case 'new':
+                [$new, $updated] = $qiita->fetchNew();
                 break;
-            case 'qiita:popular':
-                [$new, $updated, $skipped] = $qiita->fetchPopular();
+            case 'popular':
+                [$new, $updated] = $qiita->fetchPopular();
                 break;
-
-            case (str_starts_with($target, 'qiita:tag:')):
-                $tag = str_replace('qiita:tag:', '', $target);
-                [$new, $updated, $skipped] = $qiita->fetchByTag($tag);
+            case 'tag':
+                if (!$value) {
+                    $this->error('tag name requirad');
+                    return Command::FAILURE;
+                }
+                [$new, $updated] = $qiita->fetchByTag($value);
                 break;
 
             default:
-                $this->error('Unknown target: ' . $target);
+                $this->error('Unknown target: ' . $type);
                 return Command::FAILURE;
         }
 
-        $this->info("Fetched successfully: new={$new}, updated={$updated}, skipped={$skipped}");
+        $this->info("Fetched successfully: new={$new}, updated={$updated}");
         return Command::SUCCESS;
     }
 }
