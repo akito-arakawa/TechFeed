@@ -4,15 +4,19 @@ namespace App\Services\ArticleFetcher;
 use Illuminate\Support\Facades\Http;
 use App\Models\Article;
 use App\Models\Source;
+use App\Models\Category;
+use App\Models\ArticleCategory;
 
 class QiitaFetcher
 {
     private string $baseUrl = 'https://qiita.com/api/v2/items';
     private string $defaultQiitaThumbnail;
+    private Source $source;
 
     public function __construct()
     {
         $this->defaultQiitaThumbnail = url('images/qiita.png');
+        $this->source = Source::where('name', 'Qiita')->first();
     }
 
     // 新着記事
@@ -28,11 +32,6 @@ class QiitaFetcher
     // 人気記事
     public function fetchPopular(): array
     {
-        $new = 0;
-        $updated = 0;
-        $skipped = 0;
-        $source = Source::where('name', 'Qiita')->first();
-
         $mergedItems = [];
 
         // Qiita API は page 1〜100 まで
@@ -46,7 +45,7 @@ class QiitaFetcher
             ]);
 
             if ($response->failed()) {
-                break;
+                throw new \RuntimeException("Qiita API Error: " . $response->status());
             }
 
             $items = $response->json();
@@ -58,27 +57,7 @@ class QiitaFetcher
         }
 
         // まとめて保存
-        foreach ($mergedItems as $item) {
-            $article = Article::updateOrCreate(
-                [
-                    'source_id' => $source->id,
-                    'source_item_id' => $item['id'],
-                ],
-                [
-                    'url' => $item['url'],
-                    'title' => $item['title'],
-                    'author_name' => $item['user']['id'] ?? null,
-                    'thumbnail_url' => $this->defaultQiitaThumbnail,
-                    'source_like_count' => $item['likes_count'] ?? 0,
-                    'pubished_at' => $item['created_at'],
-                    'fetched_at' => now(),
-                ]
-            );
-
-            $article->wasRecentlyCreated ? $new++ : $updated++;
-        }
-
-        return [$new, $updated, $skipped];
+        return $this->fetchFromApi($mergedItems);
     }
 
     // カテゴリ別記事
@@ -91,27 +70,28 @@ class QiitaFetcher
         ]);
     }
 
-    // APIアクセス＋保存
+    // APIアクセス
     public function fetchFromApi(array $params): array
     {
-        $new = 0;
-        $updated = 0;
-        $skipped = 0;
-
         $response = HTTP::get($this->baseUrl, $params);
 
         if ($response->failed()) {
             throw new \RuntimeException('Qiita API error:' . $response->status());
         }
 
-        $items = $response->json();
-        $source = Source::where('name', 'Qiita')->first();
+        return $this->saveArticles($response->json());
+    }
 
-        // すでに取得済みのデータは更新・新規取得は登録
+    // 記事保存
+    public function saveArticles(array $items): array
+    {
+        $new = 0;
+        $updated = 0;
+
         foreach ($items as $item) {
             $article = Article::updateOrCreate(
                 [
-                    'source_id' => $source->id,
+                    'source_id' => $this->source->id,
                     'source_item_id' => $item['id'],
                 ],
                 [
@@ -125,9 +105,30 @@ class QiitaFetcher
                 ]
             );
 
+            $this->saveArticleCategory($item, $article);
+
             $article->wasRecentlyCreated ? $new++ : $updated++;
         }
 
-        return [$new, $updated, $skipped];
+        return [$new, $updated];
+    }
+
+    // カテゴリ紐づけ
+    public function saveArticleCategory($item, $article)
+    {
+        $tags = $item['tags'] ?? [];
+
+        foreach ($tags as $tag) {
+            $category = Category::where('slug', $tag['name'])
+                ->where('name', $tag['name'])
+                ->first();
+
+            if (isset($category)) {
+                ArticleCategory::create([
+                    'article_id' => $article['id'],
+                    'category_id' => $category['id'],
+                ]);
+            }
+        }
     }
 }
