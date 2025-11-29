@@ -4,6 +4,8 @@ namespace App\Services\ArticleFetcher;
 use Illuminate\Support\Facades\Http;
 use App\Models\Article;
 use App\Models\Source;
+use App\Models\Category;
+use App\Models\ArticleCategory;
 
 class QiitaFetcher
 {
@@ -103,9 +105,30 @@ class QiitaFetcher
                 ]
             );
 
+            $this->saveArticleCategory($item, $article);
+
             $article->wasRecentlyCreated ? $new++ : $updated++;
         }
 
         return [$new, $updated];
+    }
+
+    // カテゴリ紐づけ
+    public function saveArticleCategory($item, $article)
+    {
+        $tags = $item['tags'] ?? [];
+
+        foreach ($tags as $tag) {
+            $category = Category::where('slug', $tag['name'])
+                ->where('name', $tag['name'])
+                ->first();
+
+            if (isset($category)) {
+                ArticleCategory::create([
+                    'article_id' => $article['id'],
+                    'category_id' => $category['id'],
+                ]);
+            }
+        }
     }
 }
