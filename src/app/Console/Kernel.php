@@ -21,6 +21,12 @@ class Kernel extends ConsoleKernel
         $schedule->command('articles:fetch qiita:tag:react')->daily();
         $schedule->command('articles:fetch qiita:tag:laravel')->daily();
         $schedule->command('articles:fetch qiita:tag:javascrpit')->daily();
+        $schedule->command('fetch:zenn new')->daily()->appendOutputTo(storage_path('logs/zenn.log'));
+        $schedule->command('fetch:zenn popular weekly')->weekly()->appendOutputTo(storage_path('logs/zenn.log'));
+        $schedule->command('fetch:zenn popular alltime')->monthly()->appendOutputTo(storage_path('logs/zenn.log'));
+        $schedule->command('fetch:zenn tag react')->weekly()->appendOutputTo(storage_path('logs/zenn.log'));
+        $schedule->command('fetch:zenn tag laravel')->weekly()->appendOutputTo(storage_path('logs/zenn.log'));
+        $schedule->command('fetch:zenn tag javascrpit')->weekly()->appendOutputTo(storage_path('logs/zenn.log'));
     }
 
     /**

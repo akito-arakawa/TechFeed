@@ -17,7 +17,7 @@ class SourceSeeder extends Seeder
     {
         DB::table('sources')->insert([
             ['name' => 'Qiita', 'url' => 'https://qiita.com/api/v2/items'],
-            ['name' => 'Zenn', 'url' => 'https://zenn.dev/feed']
+            ['name' => 'Zenn',  'url' => 'https://zenn.dev/api/articles'],
         ]);
     }
     
