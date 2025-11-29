@@ -72,7 +72,7 @@ class ZennFetcher
                     'author_name' => $item['user']['username'] ?? null,
                     'thumbnail_url' => $item['emoji'] ?? $this->defaultZennThumbnail,
                     'source_like_count' => $item['liked_count'] ?? 0,
-                    'pubished_at' => $item['published_at'],
+                    'published_at' => $item['published_at'],
                     'fetched_at' => now(),
                 ]
             );
