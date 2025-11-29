@@ -11,6 +11,8 @@ class ArticleCategory extends Model
 
     protected $table = 'article_categories';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'article_id',
         'category_id'
