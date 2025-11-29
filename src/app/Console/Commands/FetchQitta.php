@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Services\ArticleFetcher\QiitaFetcher;
 
-class FetchArticles extends Command
+class FetchQitta extends Command
 {
     /**
      * The name and signature of the console command.
@@ -18,7 +18,7 @@ class FetchArticles extends Command
      *
      * @var string
      */
-    protected $description = 'Fetch articles from Qiita or Zenn';
+    protected $description = 'Fetch articles from Qiita';
 
     /**
      * Execute the console command.
