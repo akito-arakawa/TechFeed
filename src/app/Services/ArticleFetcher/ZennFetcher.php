@@ -4,6 +4,9 @@ namespace App\Services\ArticleFetcher;
 use Illuminate\Support\Facades\Http;
 use App\Models\Article;
 use App\Models\Source;
+use App\Models\Category;
+use App\Models\ArticleCategory;
+
 class ZennFetcher
 {
     private string $baseUrl = 'https://zenn.dev/api/articles';
@@ -11,7 +14,7 @@ class ZennFetcher
 
     public function __construct()
     {
-        $this->defaultZennThumbnail = url('images/qiita.png');
+        $this->defaultZennThumbnail = url('images/zenn.png');
     }
 
     // 新着記事
@@ -27,7 +30,7 @@ class ZennFetcher
     public function fetchPopular(string $term = 'weekly'): array
     {
         return $this->fetchFromApi([
-            'order' => $term, //weeky or monthly
+            'order' => $term, //weekly or alltime
             'count' => 100,
         ]);
     }
@@ -36,7 +39,7 @@ class ZennFetcher
     public function fetchByTag(string $tag): array
     {
         return $this->fetchFromApi([
-            'topic' => $tag,
+            'topicname' => $tag,
             'count' => 100,
         ]);
     }
@@ -53,12 +56,10 @@ class ZennFetcher
             throw new \RuntimeException('Zenn API error:' . $response->status());
         }
 
-        $items = $response->json();
+        $json = $response->json();
         $items = $json['articles'] ?? [];
-
         $source = Source::where('name', 'Zenn')->first();
 
-        // すでに取得済みのデータは更新・新規取得は登録
         foreach ($items as $item) {
             $article = Article::updateOrCreate(
                 [
@@ -66,17 +67,35 @@ class ZennFetcher
                     'source_item_id' => $item['id'],
                 ],
                 [
-                    'url' => "https://zenn.dev/{$item['path']}",
+                    'url' => "https://zenn.dev/" . ltrim($item['path'], '/'),
                     'title' => $item['title'],
                     'author_name' => $item['user']['username'] ?? null,
-                    'thumbnail_url' => $item['emoji']
-                        ? "https://zenn.dev/images/emojis/{$item['emoji']}.png"
-                        : $this->defaultZennThumbnail,
-                    'source_like_count' => $item['likes_count'] ?? 0,
+                    'thumbnail_url' => $item['emoji'] ?? $this->defaultZennThumbnail,
+                    'source_like_count' => $item['liked_count'] ?? 0,
                     'pubished_at' => $item['published_at'],
                     'fetched_at' => now(),
                 ]
             );
+
+            // カテゴリとの関連づけ
+            $url = $this->baseUrl . '/' . $item['slug'];
+            $itemResponse = Http::get($url);
+            if ($itemResponse ->failed()) {
+                throw new \RuntimeException('Zenn API error:' . $response->status());
+            }
+
+            $itemsJson = $itemResponse->json();
+            
+            $topics = $itemsJson['article']['topics'] ?? [];
+            foreach ($topics as $topic) {
+                $category = Category::where('slug', $topic['name'])->first();
+                if (isset($category)) {
+                    ArticleCategory::create([
+                        'article_id' => $article['id'],
+                        'category_id' => $category['id'],
+                    ]);
+                }
+            }
 
             $article->wasRecentlyCreated ? $new++ : $updated++;
         }
