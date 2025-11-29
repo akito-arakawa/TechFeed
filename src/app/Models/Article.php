@@ -11,7 +11,7 @@ class Article extends Model
 
     protected $fillable = [
         'source_id','source_item_id','url','title','author_name',
-        'thumbnail_url','source_like_count','pubished_at','fetched_at'
+        'thumbnail_url','source_like_count','published_at','fetched_at'
     ];
 
     protected $cats = [
