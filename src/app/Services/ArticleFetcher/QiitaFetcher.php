@@ -100,7 +100,7 @@ class QiitaFetcher
                     'author_name' => $item['user']['id'] ?? null,
                     'thumbnail_url' => $this->defaultQiitaThumbnail,
                     'source_like_count' => $item['likes_count'] ?? 0,
-                    'pubished_at' => $item['created_at'],
+                    'published_at' => $item['created_at'],
                     'fetched_at' => now(),
                 ]
             );
