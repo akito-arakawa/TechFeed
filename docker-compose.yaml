@@ -74,9 +74,26 @@ services:
     ports:
       - 8025:8025
       - 1025:1025
+
+  cron:
+    container_name: tech-cron
+    build: ./docker/cron
+    volumes:
+      - ./src:/app
+      - ./docker/cron/laravel-cron:/etc/cron.d/laravel-cron
+    entrypoint: [
+      "bash", "-c",
+      "chmod 0644 /etc/cron.d/laravel-cron &&
+      cron &&
+      tail -f /var/log/cron.log"
+    ]
+    networks:
+      - appnet  
+    restart: unless-stopped
+
 volumes:
   dbdata:
-
+  
 networks:
   appnet:
     driver: bridge
