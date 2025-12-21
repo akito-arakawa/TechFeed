@@ -16,10 +16,10 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('fetch:qitta popular')->weekly();
-        $schedule->command('fetch:qitta tag react')->daily();
-        $schedule->command('fetch:qitta tag laravel')->daily();
-        $schedule->command('fetch:qitta tag javascrpit')->daily();
-        $schedule->command('fetch:zenn new')->daily()->appendOutputTo(storage_path('logs/zenn.log'));
+        $schedule->command('fetch:qitta tag react')->weekly();
+        $schedule->command('fetch:qitta tag laravel')->weekly();
+        $schedule->command('fetch:qitta tag javascrpit')->weekly();
+        $schedule->command('fetch:zenn new')->weekly()->appendOutputTo(storage_path('logs/zenn.log'));
         $schedule->command('fetch:zenn popular weekly')->weekly()->appendOutputTo(storage_path('logs/zenn.log'));
         $schedule->command('fetch:zenn popular alltime')->monthly()->appendOutputTo(storage_path('logs/zenn.log'));
         $schedule->command('fetch:zenn tag react')->weekly()->appendOutputTo(storage_path('logs/zenn.log'));
