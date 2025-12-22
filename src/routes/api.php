@@ -1,6 +1,7 @@
 <?php
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\HomeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,4 +18,8 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/signup', [AuthController::class, 'signup']);
 Route::middleware('auth.token')->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
+});
+
+Route::middleware('optional.auth')->group(function () {
+    Route::get('/home', [HomeController::class, 'index']);
 });
