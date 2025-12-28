@@ -3,10 +3,11 @@
 namespace App\Services;
 use App\Models\Article;
 use App\Models\UserBookmark;
+use App\Http\Resources\HomeResource;
 
 class HomeService
 {
-    public function getHome($user): array
+    public function getHome($user)
     {
         $popular = $this->getPopularArticles($user);
         $latest = $this->getNewArticles($user);
@@ -50,11 +51,12 @@ class HomeService
 
     public function getRecommendedForGuest($popularArticles, $latest)
     {
-        $articles = Article::with(['source', 'categories'])
+        $limit = config('home.sections.recommended.limit');
+        $articles = $this->getBaseArticleQuery(null)
             ->whereNotIn('id', $popularArticles->pluck('id'))
             ->whereNotIn('id', $latest->pluck('id'))
             ->orderByDesc('source_like_count')
-            ->limit(config('home.sections.recommended.limit'))
+            ->limit($limit)
             ->get();
 
         return $this->formatArticleList($articles);
@@ -62,13 +64,16 @@ class HomeService
 
     public function getRecommendedForUser($user, $popularArticles, $latest)
     {
+        $excludedIds = $popularArticles->pluck('id')->merge($latest->pluck('id'));
+        $limit = config('home.sections.recommended.limit');
+
         $categoryIds = UserBookmark::query()
             ->join('article_categories', 'user_bookmarks.article_id', '=', 'article_categories.article_id')
             ->where('user_bookmarks.user_id', $user->id)
             ->select('article_categories.category_id')
             ->groupBy('article_categories.category_id')
             ->orderByRaw('COUNT(*) DESC')
-            ->limit(3)
+            ->limit($limit)
             ->pluck('category_id');
 
         $articles = $this->getBaseArticleQuery($user)
@@ -78,17 +83,15 @@ class HomeService
             ->whereDoesntHave('bookmarks', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })
-            ->whereNotIn('id', $popularArticles->pluck('id'))
-            ->whereNotIn('id', $latest->pluck('id'))
+            ->whereNotIn('id', $excludedIds)
             ->orderByDesc('source_like_count')
-            ->limit(config('home.sections.recommended.limit'))
+            ->limit($limit)
             ->get();
 
-        if ($articles->count() < 3) {
+        if ($articles->count() < $limit) {
+            $fallbackExcludedIds = $excludedIds->merge($articles->pluck('id'));
             $fallback = $this->getBaseArticleQuery($user)
-                ->whereNotIn('id', $articles->pluck('id'))
-                ->whereNotIn('id', $popularArticles->pluck('id'))
-                ->whereNotIn('id', $latest->pluck('id'))
+                ->whereNotIn('id', $fallbackExcludedIds)
                 ->orderByDesc('published_at')
                 ->limit(3 - $articles->count())
                 ->get();
@@ -99,12 +102,12 @@ class HomeService
         return $this->formatArticleList($articles);
     }
 
-
     public function getPopularArticles($user)
     {
+        $limit = config('home.sections.popular.limit');
         $articles = $this->getBaseArticleQuery($user)
             ->orderByDesc('source_like_count')
-            ->limit(config('home.sections.popular.limit'))
+            ->limit($limit)
             ->get();
 
         return $this->formatArticleList($articles);
@@ -112,9 +115,10 @@ class HomeService
 
     public function getNewArticles($user)
     {
+        $limit = config('home.sections.new.limit');
         $articles = $this->getBaseArticleQuery($user)
             ->orderByDesc('published_at')
-            ->limit(config('home.sections.new.limit'))
+            ->limit($limit)
             ->get();
 
         return $this->formatArticleList($articles);
@@ -122,23 +126,6 @@ class HomeService
 
     public function formatArticleList($articles)
     {
-        return $articles->map(function ($article) {
-
-            return [
-                'id' => $article->id,
-                'title' => $article->title,
-                'source' => [
-                    'id' => $article->source->id,
-                    'name' => $article->source->name,
-                ],
-                'thumbnailUrl' => $article->thumbnail_url,
-                'categories' => $article->categories->map(fn($c) => [
-                    'name' => $c->name,
-                ]),
-                'likeCount' => $article->source_like_count,
-                'bookmarked' => $article->bookmarks->isNotEmpty(),
-                'publishedAt' => $article->published_at->toISOString(),
-            ];
-        });
+        return HomeResource::collection($articles);
     }
 }
