@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up()
     {
-            Schema::rename('user_likes', 'user_bookmarks');
+        Schema::rename('user_likes', 'user_bookmarks');
     }
 
     /**
@@ -23,6 +23,6 @@ return new class extends Migration
      */
     public function down()
     {
-            Schema::rename('user_bookmarks','user_likes');
+        Schema::rename('user_bookmarks','user_likes');
     }
 };

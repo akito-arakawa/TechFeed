@@ -34,6 +34,11 @@ class HomeService
         ];
     }
 
+    private function getBaseArticleQuery($user)
+    {
+        return Article::with(['source', 'categories', 'bookmarks' => fn($q) => $q->where('user_id', $user?->id)]);
+    }
+
     public function getRecommendedArticles($user, $popularArticles, $latest)
     {
         if (!$user) {
@@ -66,28 +71,23 @@ class HomeService
             ->limit(3)
             ->pluck('category_id');
 
-        $articles = Article::with([
-            'source',
-            'categories',
-            'bookmarks' => fn($q) => $q->where('user_id', $user->id),
-        ])
+        $articles = $this->getBaseArticleQuery($user)
             ->whereHas('categories', function ($q) use ($categoryIds) {
                 $q->whereIn('categories.id', $categoryIds);
             })
             ->whereDoesntHave('bookmarks', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })
+            ->whereNotIn('id', $popularArticles->pluck('id'))
+            ->whereNotIn('id', $latest->pluck('id'))
             ->orderByDesc('source_like_count')
             ->limit(config('home.sections.recommended.limit'))
             ->get();
 
         if ($articles->count() < 3) {
-            $fallback = Article::with([
-                'source',
-                'categories',
-                'bookmarks' => fn($q) => $q->where('user_id', $user->id),
-            ])
+            $fallback = $this->getBaseArticleQuery($user)
                 ->whereNotIn('id', $articles->pluck('id'))
+                ->whereNotIn('id', $popularArticles->pluck('id'))
                 ->whereNotIn('id', $latest->pluck('id'))
                 ->orderByDesc('published_at')
                 ->limit(3 - $articles->count())
@@ -102,7 +102,7 @@ class HomeService
 
     public function getPopularArticles($user)
     {
-        $articles = Article::with(['source', 'categories', 'bookmarks' => fn($q) => $q->where('user_id', $user?->id),])
+        $articles = $this->getBaseArticleQuery($user)
             ->orderByDesc('source_like_count')
             ->limit(config('home.sections.popular.limit'))
             ->get();
@@ -112,9 +112,9 @@ class HomeService
 
     public function getNewArticles($user)
     {
-        $articles = Article::with(['source', 'categories', 'bookmarks' => fn($q) => $q->where('user_id', $user?->id),])
+        $articles = $this->getBaseArticleQuery($user)
             ->orderByDesc('published_at')
-            ->limit(config('home.sections.popular.limit'))
+            ->limit(config('home.sections.new.limit'))
             ->get();
 
         return $this->formatArticleList($articles);
@@ -137,7 +137,7 @@ class HomeService
                 ]),
                 'likeCount' => $article->source_like_count,
                 'bookmarked' => $article->bookmarks->isNotEmpty(),
-                'publishedAt' => $article->published_at,
+                'publishedAt' => $article->published_at->toISOString(),
             ];
         });
     }
