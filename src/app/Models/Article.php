@@ -41,9 +41,9 @@ class Article extends Model
         );
     }
 
-    public function likes()
+    public function bookmarks()
     {
-        return $this->hasMany(UserLike::class);
+        return $this->hasMany(UserBookmark::class);
     }
 
     public function views()

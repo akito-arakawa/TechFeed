@@ -5,12 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class UserLike extends Model
+class UserBookmark extends Model
 {
     use HasFactory;
 
     public $timestamps = true;
-    protected $table = 'user_likes';
+    protected $table = 'user_bookmarks';
 
     protected $fillable = [
         'user_id',
