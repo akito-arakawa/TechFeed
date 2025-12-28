@@ -2,15 +2,16 @@
 
 namespace App\Services;
 use App\Models\Article;
-use App\Models\UserLike;
+use App\Models\UserBookmark;
+use App\Http\Resources\HomeResource;
 
 class HomeService
 {
-    public function getHome($user): array
+    public function getHome($user)
     {
-        $popular = $this->getPopularArticles();
-        $recommended = $this->getRecommendedArticles($user, $popular);
-        $latest = $this->getNewArticles();
+        $popular = $this->getPopularArticles($user);
+        $latest = $this->getNewArticles($user);
+        $recommended = $this->getRecommendedArticles($user, $popular, $latest);
 
         return [
             'serverTime' => now()->toISOString(),
@@ -34,72 +35,97 @@ class HomeService
         ];
     }
 
-    public function getRecommendedArticles($user, $popularArticles)
+    private function getBaseArticleQuery($user)
+    {
+        return Article::with(['source', 'categories', 'bookmarks' => fn($q) => $q->where('user_id', $user?->id)]);
+    }
+
+    public function getRecommendedArticles($user, $popularArticles, $latest)
     {
         if (!$user) {
-            return $this->getRecommendedForGuest($popularArticles);
+            return $this->getRecommendedForGuest($popularArticles, $latest);
         }
 
-        return $this->getRecommendedForUser($user);
+        return $this->getRecommendedForUser($user, $popularArticles, $latest);
     }
 
-    public function getRecommendedForGuest($popularArticles)
+    public function getRecommendedForGuest($popularArticles, $latest)
     {
-        return Article::whereNotIn('id', $popularArticles->pluck('id'))
+        $limit = config('home.sections.recommended.limit');
+        $articles = $this->getBaseArticleQuery(null)
+            ->whereNotIn('id', $popularArticles->pluck('id'))
+            ->whereNotIn('id', $latest->pluck('id'))
             ->orderByDesc('source_like_count')
-            ->limit(config('home.sections.recommended.limit'))
+            ->limit($limit)
             ->get();
+
+        return $this->formatArticleList($articles);
     }
 
-    public function getRecommendedForUser($user)
+    public function getRecommendedForUser($user, $popularArticles, $latest)
     {
-        $categoryIds = UserLike::query()
-            ->join('article_categories', 'user_likes.article_id', '=', 'article_categories.article_id')
-            ->where('user_likes.user_id', $user->id)
+        $excludedIds = $popularArticles->pluck('id')->merge($latest->pluck('id'));
+        $limit = config('home.sections.recommended.limit');
+
+        $categoryIds = UserBookmark::query()
+            ->join('article_categories', 'user_bookmarks.article_id', '=', 'article_categories.article_id')
+            ->where('user_bookmarks.user_id', $user->id)
             ->select('article_categories.category_id')
             ->groupBy('article_categories.category_id')
             ->orderByRaw('COUNT(*) DESC')
-            ->limit(3)
+            ->limit($limit)
             ->pluck('category_id');
 
-        $articles = Article::query()
+        $articles = $this->getBaseArticleQuery($user)
             ->whereHas('categories', function ($q) use ($categoryIds) {
                 $q->whereIn('categories.id', $categoryIds);
             })
-            ->whereDoesntHave('likes', function ($q) use ($user) {
+            ->whereDoesntHave('bookmarks', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })
+            ->whereNotIn('id', $excludedIds)
             ->orderByDesc('source_like_count')
-            ->limit(config('home.sections.recommended.limit'))
+            ->limit($limit)
             ->get();
 
-        if ($articles->count() < 3) {
-            $articles = $articles->merge(
-                Article::query()
-                    ->whereNotIn('id', $articles->pluck('id'))
-                    ->orderByDesc('published_at')
-                    ->limit(3 - $articles->count())
-                    ->get()
-            );
+        if ($articles->count() < $limit) {
+            $fallbackExcludedIds = $excludedIds->merge($articles->pluck('id'));
+            $fallback = $this->getBaseArticleQuery($user)
+                ->whereNotIn('id', $fallbackExcludedIds)
+                ->orderByDesc('published_at')
+                ->limit(3 - $articles->count())
+                ->get();
+
+            $articles = $articles->merge($fallback);
         }
 
-        return $articles;
+        return $this->formatArticleList($articles);
     }
 
-    public function getPopularArticles()
+    public function getPopularArticles($user)
     {
-        return Article::query()
+        $limit = config('home.sections.popular.limit');
+        $articles = $this->getBaseArticleQuery($user)
             ->orderByDesc('source_like_count')
-            ->limit(config('home.sections.popular.limit'))
+            ->limit($limit)
             ->get();
+
+        return $this->formatArticleList($articles);
     }
 
-    public function getNewArticles()
+    public function getNewArticles($user)
     {
-        return Article::query()
+        $limit = config('home.sections.new.limit');
+        $articles = $this->getBaseArticleQuery($user)
             ->orderByDesc('published_at')
-            ->limit(config('home.sections.popular.limit'))
+            ->limit($limit)
             ->get();
+
+        return $this->formatArticleList($articles);
     }
 
+    public function formatArticleList($articles)
+    {
+        return HomeResource::collection($articles);
+    }
 }
