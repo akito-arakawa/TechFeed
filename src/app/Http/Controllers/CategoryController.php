@@ -14,7 +14,8 @@ class CategoryController extends Controller
                 'categories' => CategoryResource::collection(Category::all()),
             ]);
         } catch (\Exception $e) {
-            return response([], 500);
+            \Illuminate\Support\Facades\Log::error($e);
+            return response()->json(['message' => 'サーバーエラーが発生しました。'], 500);
         }
     }
 }
