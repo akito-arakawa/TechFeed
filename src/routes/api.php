@@ -2,6 +2,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\CategoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,3 +24,5 @@ Route::middleware('auth.token')->group(function () {
 Route::middleware('optional.auth')->group(function () {
     Route::get('/home', [HomeController::class, 'index']);
 });
+
+Route::get('/categories', [CategoryController::class, 'index']);
