@@ -23,6 +23,6 @@ Route::middleware('auth.token')->group(function () {
 
 Route::middleware('optional.auth')->group(function () {
     Route::get('/home', [HomeController::class, 'index']);
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/categories/{slug}', [CategoryController::class, 'show']);
 });
-
-Route::get('/categories', [CategoryController::class, 'index']);
