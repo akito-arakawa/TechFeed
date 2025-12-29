@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Http;
 use App\Models\Article;
 use App\Models\Source;
 use App\Models\Category;
-use App\Models\ArticleCategory;
 
 class ZennFetcher
 {
@@ -80,20 +79,19 @@ class ZennFetcher
             // カテゴリとの関連づけ
             $url = $this->baseUrl . '/' . $item['slug'];
             $itemResponse = Http::get($url);
-            if ($itemResponse ->failed()) {
+            if ($itemResponse->failed()) {
                 throw new \RuntimeException('Zenn API error:' . $response->status());
             }
 
             $itemsJson = $itemResponse->json();
-            
+
             $topics = $itemsJson['article']['topics'] ?? [];
-            foreach ($topics as $topic) {
-                $category = Category::where('slug', $topic['name'])->first();
-                if (isset($category)) {
-                    ArticleCategory::create([
-                        'article_id' => $article['id'],
-                        'category_id' => $category['id'],
-                    ]);
+            if (!empty($topics)) {
+                $topicNames = array_column($topics, 'name');
+                $categoryIds = Category::whereIn('slug', $topicNames)->pluck('id');
+
+                if ($categoryIds->isNotEmpty()) {
+                    $article->categories()->syncWithoutDetaching($categoryIds);
                 }
             }
 

@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Http;
 use App\Models\Article;
 use App\Models\Source;
 use App\Models\Category;
-use App\Models\ArticleCategory;
 
 class QiitaFetcher
 {
@@ -117,18 +116,20 @@ class QiitaFetcher
     public function saveArticleCategory($item, $article)
     {
         $tags = $item['tags'] ?? [];
+        if (empty($tags)) {
+            return;
+        }
 
-        foreach ($tags as $tag) {
-            $category = Category::where('slug', $tag['name'])
-                ->where('name', $tag['name'])
-                ->first();
+        $tagNames = array_column($tags, 'name');
 
-            if (isset($category)) {
-                ArticleCategory::create([
-                    'article_id' => $article['id'],
-                    'category_id' => $category['id'],
-                ]);
-            }
+        // 'slug'と'name'が同じであるという前提の元のクエリに基づき、
+        // 'name'カラムで検索し、'slug'と'name'が一致するものを取得します。
+        $categoryIds = Category::whereIn('name', $tagNames)
+            ->whereColumn('slug', 'name')
+            ->pluck('id');
+
+        if ($categoryIds->isNotEmpty()) {
+            $article->categories()->syncWithoutDetaching($categoryIds);
         }
     }
 }
