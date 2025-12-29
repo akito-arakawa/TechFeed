@@ -25,7 +25,7 @@ return new class extends Migration {
     public function down()
     {
         Schema::table('article_categories', function (Blueprint $table) {
-            $table->dropUnique('article_category_unique');
+            $table->dropUnique(['article_id', 'category_id']);
         });
     }
 };

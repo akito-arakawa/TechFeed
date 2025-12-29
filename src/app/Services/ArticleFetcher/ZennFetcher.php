@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Http;
 use App\Models\Article;
 use App\Models\Source;
 use App\Models\Category;
-use App\Models\ArticleCategory;
 
 class ZennFetcher
 {
@@ -87,12 +86,12 @@ class ZennFetcher
             $itemsJson = $itemResponse->json();
 
             $topics = $itemsJson['article']['topics'] ?? [];
-            foreach ($topics as $topic) {
-                $category = Category::where('slug', $topic['name'])->first();
-                if ($category) {
-                    $article->categories()->syncWithoutDetaching([
-                        $category->id
-                    ]);
+            if (!empty($topics)) {
+                $topicNames = array_column($topics, 'name');
+                $categoryIds = Category::whereIn('slug', $topicNames)->pluck('id');
+
+                if ($categoryIds->isNotEmpty()) {
+                    $article->categories()->syncWithoutDetaching($categoryIds);
                 }
             }
 
