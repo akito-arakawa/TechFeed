@@ -17,6 +17,7 @@ class CategoryResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'slug'=> $this->slug,
             'iconUrl' => $this->icon_url
                 ? asset($this->icon_url)
                 : null,

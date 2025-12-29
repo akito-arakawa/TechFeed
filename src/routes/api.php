@@ -26,3 +26,4 @@ Route::middleware('optional.auth')->group(function () {
 });
 
 Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/categories/{slug}', [CategoryController::class, 'show']);

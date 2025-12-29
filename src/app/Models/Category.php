@@ -14,9 +14,14 @@ class Category extends Model
         'slug'
     ];
 
-     public function articleCategory()
+    public function articleCategory()
     {
         return $this->hasMany(ArticleCategory::class);
     }
-    
+
+    public function scopeSlug($query, $slug)
+    {
+        return $query->where('slug', $slug);
+    }
+
 }
