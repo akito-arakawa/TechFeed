@@ -8,6 +8,7 @@ use App\Models\Article;
 
 class CategoryService
 {
+    private const ARTICLES_PER_PAGE = 6;
     public function getArticlesByCategory(Category $category, ?User $user, int $page)
     {
         return Article::query()
@@ -22,6 +23,6 @@ class CategoryService
                 $q->where('categories.id', $category->id)
             )
             ->orderByDesc('source_like_count')
-            ->paginate(6, ['*'], 'page', $page);
+            ->paginate(self::ARTICLES_PER_PAGE, ['*'], 'page', $page);
     }
 }
