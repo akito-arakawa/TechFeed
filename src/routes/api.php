@@ -1,6 +1,6 @@
 <?php
-use App\Http\Controllers\ArticleBookmarkController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ArticleBookmarkController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\CategoryController;

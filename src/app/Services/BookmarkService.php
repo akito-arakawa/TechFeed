@@ -8,18 +8,9 @@ class BookmarkService
 
     public function bookmark(User $user, int $articleId)
     {
-        $exists = UserBookmark::where('user_id', $user->id)
-            ->where('article_id', $articleId)
-            ->exists();
-
-        if ($exists) {
-            return;
-        }
-
-        UserBookmark::create([
+        UserBookmark::firstOrCreate([
             'user_id' => $user->id,
             'article_id' => $articleId,
-            'create_at' => now(),
         ]);
     }
 }
