@@ -9,12 +9,16 @@ class UserBookmark extends Model
 {
     use HasFactory;
 
-    public $timestamps = true;
+    public $timestamps = false;
     protected $table = 'user_bookmarks';
 
     protected $fillable = [
         'user_id',
         'article_id',
+    ];
+
+    protected $casts = [
+        'created_at' => 'datetime',
     ];
 
     public function user()
@@ -26,5 +30,4 @@ class UserBookmark extends Model
     {
         return $this->belongsTo(Article::class);
     }
-    
 }
