@@ -17,6 +17,7 @@ return new class extends Migration
             $table->id();
             $table->string('name', 70)->nullable()->unique();
             $table->string('slug', 70)->nullable()->unique();
+            $table->string('icon_url', 255)->nullable();
         });
     }
 
