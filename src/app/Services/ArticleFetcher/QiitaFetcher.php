@@ -123,10 +123,9 @@ class QiitaFetcher
                 ->where('name', $tag['name'])
                 ->first();
 
-            if (isset($category)) {
-                ArticleCategory::create([
-                    'article_id' => $article['id'],
-                    'category_id' => $category['id'],
+            if ($category) {
+                $article->categories()->syncWithoutDetaching([
+                    $category->id
                 ]);
             }
         }
