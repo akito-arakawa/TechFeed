@@ -18,8 +18,9 @@ return new class extends Migration {
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('article_id');
             $table->foreign('article_id')->references('id')->on('articles')->onDelete('cascade');
-            $table->string('seesion_id', 255)->nullable();
-            $table->timestamp('create_at');
+            $table->dateTime('last_viewed_at')->nullable();
+            $table->timestamps();
+            $table->unique(['article_id', 'user_id']);
         });
     }
 

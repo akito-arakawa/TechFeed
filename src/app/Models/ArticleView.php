@@ -15,7 +15,7 @@ class ArticleView extends Model
     protected $fillable = [
         'user_id',
         'article_id',
-        'session_id'
+        'last_viewed_at',
     ];
 
     public function user()
