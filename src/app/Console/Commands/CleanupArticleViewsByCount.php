@@ -28,18 +28,17 @@ class CleanupArticleViewsByCount extends Command
      */
     public function handle(): void
     {
-        $maxViewsPerUser = config('article_views.max_per_user');
-        $limit = config('article_views.limit');
-        
+        $maxRecordsPerUser = config('article_views.max_records_per_user');
+
         $userIds = ArticleView::select('user_id')
             ->groupBy('user_id')
-            ->havingRaw('COUNT(*) > ?'[$maxViewsPerUser])
+            ->havingRaw('COUNT(*) > ?', [$maxRecordsPerUser])
             ->pluck('user_id');
 
         foreach ($userIds as $userId) {
             $keepIds = ArticleView::where('user_id', $userId)
                 ->orderByDesc('last_viewed_at')
-                ->limit($limit)
+                ->limit($maxRecordsPerUser)
                 ->pluck('id');
 
             ArticleView::where('user_id', $userId)
