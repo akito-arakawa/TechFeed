@@ -25,6 +25,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('fetch:zenn tag react')->weekly()->appendOutputTo(storage_path('logs/zenn.log'));
         $schedule->command('fetch:zenn tag laravel')->weekly()->appendOutputTo(storage_path('logs/zenn.log'));
         $schedule->command('fetch:zenn tag javascrpit')->weekly()->appendOutputTo(storage_path('logs/zenn.log'));
+        $schedule->command('article-views:cleanup-by-date')->daily();
+        $schedule->command('article-views:cleanup-by-count')->weekly();
     }
 
     /**
