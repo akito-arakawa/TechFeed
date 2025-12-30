@@ -16,11 +16,13 @@ class BookmarkService
 
     public function unbookmark(User $user, int $articleId)
     {
-        $bookmark = UserBookmark::where('user_id', $user->id)
+        $deletedCount = UserBookmark::where('user_id', $user->id)
             ->where('article_id', $articleId)
-            ->firstOrFail();
+            ->delete();
 
-        $bookmark->delete();
+        if ($deletedCount === 0) {
+            throw (new \Illuminate\Database\Eloquent\ModelNotFoundException)->setModel(UserBookmark::class);
+        }
     }
 
 }
