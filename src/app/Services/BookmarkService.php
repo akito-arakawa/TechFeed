@@ -13,4 +13,14 @@ class BookmarkService
             'article_id' => $articleId,
         ]);
     }
+
+    public function unbookmark(User $user, int $articleId)
+    {
+        $bookmark = UserBookmark::where('user_id', $user->id)
+            ->where('article_id', $articleId)
+            ->firstOrFail();
+
+        $bookmark->delete();
+    }
+
 }

@@ -21,6 +21,7 @@ Route::post('/signup', [AuthController::class, 'signup']);
 Route::middleware('auth.token')->group(function () {
     Route::post('logout', [AuthController::class, 'logout']);
     Route::post('/articles/{article}/bookmark', [ArticleBookmarkController::class, 'store']);
+    Route::delete('/articles/{article}/bookmark', [ArticleBookmarkController::class, 'destroy']);
 });
 
 Route::middleware('optional.auth')->group(function () {
