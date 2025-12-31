@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ArticleViewController;
+use App\Http\Controllers\Me\MeBookmarkController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,6 +25,7 @@ Route::middleware('auth.token')->group(function () {
     Route::post('/articles/{article}/bookmark', [ArticleBookmarkController::class, 'store']);
     Route::delete('/articles/{article}/bookmark', [ArticleBookmarkController::class, 'destroy']);
     Route::post('/articles/{article}/view', [ArticleViewController::class, 'store']);
+    Route::get('me/bookmarks', [MeBookmarkController::class, 'index']);
 });
 
 Route::middleware('optional.auth')->group(function () {

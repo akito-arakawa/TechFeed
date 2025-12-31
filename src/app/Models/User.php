@@ -49,6 +49,16 @@ class User extends Authenticatable
         return $this->hasOne(UserToken::class);
     }
 
+    public function bookmarks()
+    {
+        return $this->belongsToMany(
+            Article::class,
+            'user_bookmarks',
+            'user_id',
+            'article_id',
+        );
+    }
+
     public function createUser($name, $email, $password)
     {
         $this->name = $name;
