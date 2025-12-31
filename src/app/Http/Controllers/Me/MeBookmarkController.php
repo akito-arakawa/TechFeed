@@ -17,9 +17,10 @@ class MeBookmarkController extends Controller
     public function index(BookmarkIndexRequest $req)
     {
         try {
+            $defaultPage = 1;
             $user = auth()->user();
-
-            $articles = $this->bookmarkService->getBookmark($user, $req->page);
+            $page = $req->input('page', $defaultPage);
+            $articles = $this->bookmarkService->getBookmark($user, $page);
 
             return response()->json(
                 ['articles' => HomeResource::collection($articles)->response()->getData(true)],
