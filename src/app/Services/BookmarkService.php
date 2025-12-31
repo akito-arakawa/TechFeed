@@ -29,7 +29,7 @@ class BookmarkService
     public function getBookmark(User $user, int $page)
     {
         return $user->bookmarks()
-            ->with(['source', 'categories', 'bookmarks'])
+            ->with(['source', 'categories'])
             ->orderByDesc('user_bookmarks.created_at')
             ->paginate(self::ARTICLES_PER_PAGE, ['*'], 'page', $page);
     }
