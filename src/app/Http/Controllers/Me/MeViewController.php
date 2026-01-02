@@ -3,25 +3,26 @@
 namespace App\Http\Controllers\Me;
 
 use App\Http\Controllers\Controller;
-use App\Services\BookmarkService;
-use App\Http\Requests\BookmarkRequest;
+use App\Http\Requests\ViewRequest;
+use App\Services\ViewService;
 use App\Http\Resources\HomeResource;
 use Illuminate\Support\Facades\Log;
 
-class MeBookmarkController extends Controller
+
+class MeViewController extends Controller
 {
     public function __construct(
-        private BookmarkService $bookmarkService
+        private ViewService $viewService
     ) {
     }
-    public function index(BookmarkRequest $req)
+    public function index(ViewRequest $req)
     {
         try {
             $validated = $req->validated();
             $page = $validated['page'] ?? 1;
             $user = auth()->user();
             $page = $req->input('page', $page);
-            $articles = $this->bookmarkService->getBookmark($user, $page);
+            $articles = $this->viewService->getviews($user, $page);
 
             return response()->json(
                 ['articles' => HomeResource::collection($articles)->response()->getData(true)],
@@ -31,5 +32,4 @@ class MeBookmarkController extends Controller
             return response()->json(['message' => 'サーバーエラーが発生しました。'], 500);
         }
     }
-
 }

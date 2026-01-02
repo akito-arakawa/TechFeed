@@ -59,6 +59,16 @@ class User extends Authenticatable
         );
     }
 
+    public function views()
+    {
+        return $this->belongsToMany(
+            Article::class,
+            'article_views',
+            'user_id',
+            'article_id',
+        );
+    }
+
     public function createUser($name, $email, $password)
     {
         $this->name = $name;
