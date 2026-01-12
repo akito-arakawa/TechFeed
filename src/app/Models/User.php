@@ -66,7 +66,7 @@ class User extends Authenticatable
             'article_views',
             'user_id',
             'article_id',
-        );
+        )->withPivot('last_viewed_at');
     }
 
     public function createUser($name, $email, $password)

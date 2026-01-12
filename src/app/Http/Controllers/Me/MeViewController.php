@@ -21,8 +21,7 @@ class MeViewController extends Controller
             $validated = $req->validated();
             $page = $validated['page'] ?? 1;
             $user = auth()->user();
-            $page = $req->input('page', $page);
-            $articles = $this->viewService->getviews($user, $page);
+            $articles = $this->viewService->getViews($user, $page);
 
             return response()->json(
                 ['articles' => HomeResource::collection($articles)->response()->getData(true)],
