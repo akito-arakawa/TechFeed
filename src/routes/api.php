@@ -7,6 +7,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ArticleViewController;
 use App\Http\Controllers\Me\MeBookmarkController;
 use App\Http\Controllers\Me\MeViewController;
+use App\Http\Controllers\ArticleSearchController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,6 +29,7 @@ Route::middleware('auth.token')->group(function () {
     Route::post('/articles/{article}/view', [ArticleViewController::class, 'store']);
     Route::get('me/bookmarks', [MeBookmarkController::class, 'index']);
     Route::get('me/views', [MeViewController::class, 'index']);
+    Route::get('articles/search', [ArticleSearchController::class, 'index']);
 });
 
 Route::middleware('optional.auth')->group(function () {
