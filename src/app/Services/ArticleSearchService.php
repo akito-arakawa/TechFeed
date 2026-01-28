@@ -14,9 +14,9 @@ class ArticleSearchService
             'categories',
             'bookmarks' => fn($q) => $q->where('user_id', $user?->id),
         ]);
-
         if (filled($keyword)) {
-            $query->where('title', 'like', "%{$keyword}%");
+            $escapedKeyword = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $keyword);
+            $query->where('title', 'like', "%{$escapedKeyword}%");
         }
 
         if ($category !== "all") {
