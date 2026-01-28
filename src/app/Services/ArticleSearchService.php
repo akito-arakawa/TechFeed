@@ -7,7 +7,7 @@ use App\Models\User;
 class ArticleSearchService
 {
     private const ARTICLES_PER_PAGE = 12;
-    public function articleSearch(string $keyword, string $category, string $sort, User $user, int $page)
+    public function articleSearch(string $keyword, string $category, string $sort, ?User $user, int $page)
     {
         $query = Article::with([
             'source',
