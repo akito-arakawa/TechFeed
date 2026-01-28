@@ -19,11 +19,12 @@ class ArticleSearchController extends Controller
     {
         try {
             $defaultPage = 1;
-            $keyword = $req->input('keyword', '');
-            $category = $req->input('category', 'all');
-            $sort = $req->input('sort', 'postDate');
+            $validated = $req->validated();
+            $keyword = $validated['keyword'] ?? '';
+            $category = $validated['category'] ?? 'all';
+            $sort = $validated['sort'] ?? 'postDate';
             $user = auth()->user();
-            $page = $req->input('page', $defaultPage);
+            $page = $validated['page'] ?? $defaultPage;
 
             $articles = $this->articleSearchService->articleSearch($keyword, $category, $sort, $user, $page);
             
