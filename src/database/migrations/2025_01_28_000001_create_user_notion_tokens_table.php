@@ -15,10 +15,7 @@ return new class extends Migration
     {
         Schema::create('user_notion_tokens', function (Blueprint $table) {
             $table->unsignedBigInteger('user_id')->primary();
-            $table->foreign('user_id')
-                ->references('id')
-                ->on('users')
-                ->onDelete('cascade');
+            $table->foreignId('user_id')->primary()->constrained()->onDelete('cascade');
             $table->text('access_token');
             $table->text('refresh_token');
             $table->string('notion_workspace_id')->nullable();
