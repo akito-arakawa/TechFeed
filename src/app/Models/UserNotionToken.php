@@ -37,6 +37,6 @@ class UserNotionToken extends Model
 
     public function hasParentPage(): bool
     {
-        return !empty($this->parent_page_id);
+        return filled($this->parent_page_id);
     }
 }
