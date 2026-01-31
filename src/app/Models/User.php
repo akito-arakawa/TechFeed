@@ -69,6 +69,11 @@ class User extends Authenticatable
         )->withPivot('last_viewed_at');
     }
 
+    public function notionToken()
+    {
+        return $this->hasOne(UserNotionToken::class);
+    }
+
     public function createUser($name, $email, $password)
     {
         $this->name = $name;
