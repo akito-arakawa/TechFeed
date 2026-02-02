@@ -37,6 +37,12 @@ return [
 
     'zenn' => [
         'default_thumbnail' => env('ZENN_THUMBNAIL', '/images/zeen.png'),
-    ]
+    ],
+
+    'notion' => [
+        'client_id' => env('NOTION_CLIENT_ID'),
+        'client_secret' => env('NOTION_CLIENT_SECRET'),
+        'redirect_uri' => env('NOTION_REDIRECT_URI'),
+    ],
 
 ];
