@@ -12,6 +12,7 @@ class UserNotionToken extends Model
     public $incrementing = false;
 
     protected $fillable = [
+        'user_id',
         'access_token',
         'refresh_token',
         'notion_workspace_id',

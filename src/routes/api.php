@@ -8,6 +8,7 @@ use App\Http\Controllers\ArticleViewController;
 use App\Http\Controllers\Me\MeBookmarkController;
 use App\Http\Controllers\Me\MeViewController;
 use App\Http\Controllers\ArticleSearchController;
+use App\Http\Controllers\NotionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,6 +31,7 @@ Route::middleware('auth.token')->group(function () {
     Route::get('me/bookmarks', [MeBookmarkController::class, 'index']);
     Route::get('me/views', [MeViewController::class, 'index']);
     Route::get('articles/search', [ArticleSearchController::class, 'index']);
+    Route::get('/notion/auth', [NotionController::class, 'auth']);
 });
 
 Route::middleware('optional.auth')->group(function () {
@@ -37,3 +39,5 @@ Route::middleware('optional.auth')->group(function () {
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/categories/{slug}', [CategoryController::class, 'show']);
 });
+
+Route::get('/notion/callback', [NotionController::class, 'callback']);
