@@ -35,9 +35,4 @@ class UserNotionToken extends Model
     {
         return $this->belongsTo(User::class);
     }
-
-    public function hasParentPage(): bool
-    {
-        return filled($this->parent_page_id);
-    }
 }

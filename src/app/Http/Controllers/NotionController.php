@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Services\NotionService;
 use App\Services\NotionAuthService;
+use App\Models\UserNotionToken;
 use Illuminate\Support\Facades\Log;
 
 class NotionController extends Controller
@@ -65,6 +66,66 @@ class NotionController extends Controller
         }
 
         $this->notion_service->saveToken($response, $userId);
+
+        // トークン保存後、親ページを作成してからデータベースを作成
+        $notionToken = UserNotionToken::find($userId);
+        if (!$notionToken) {
+            Log::error('Notion token not found after save', ['user_id' => $userId]);
+            return response()->json(['message' => 'TOKEN_SAVE_FAILED'], 500);
+        }
+
+        try {
+            // 親ページが未設定の場合、新規作成
+            if (!filled($notionToken->parent_page_id)) {
+                $parentPageId = $this->notion_service->createParentPage(
+                    $notionToken->access_token,
+                    config('services.notion.parent_page_title', 'TechFeed')
+                );
+
+                if ($parentPageId === null) {
+                    Log::warning('Notion parent page creation failed', ['user_id' => $userId]);
+                    // 親ページ作成失敗でもトークン保存は成功として扱う
+                    return response()->json([
+                        'message' => 'success',
+                        'note' => 'Parent page creation failed. Please set parent_page_id manually.',
+                    ], 200);
+                }
+
+                // parent_page_idを保存
+                $notionToken->parent_page_id = $parentPageId;
+                $notionToken->save();
+
+                Log::info('Notion parent page created', [
+                    'user_id' => $userId,
+                    'parent_page_id' => $parentPageId,
+                ]);
+            }
+
+            // データベースを作成または取得
+            $databaseId = $this->notion_service->getOrCreateTechFeedDatabase(
+                $notionToken->access_token,
+                $notionToken->parent_page_id
+            );
+
+            if ($databaseId !== null) {
+                Log::info('Notion database created or found', [
+                    'user_id' => $userId,
+                    'database_id' => $databaseId,
+                ]);
+            } else {
+                Log::warning('Notion database creation returned null', [
+                    'user_id' => $userId,
+                    'parent_page_id' => $notionToken->parent_page_id,
+                ]);
+            }
+        } catch (\Exception $e) {
+            // ページ/データベース作成失敗はログに記録するが、トークン保存は成功として扱う
+            Log::warning('Notion page/database creation failed', [
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
 
         return response()->json([
             'message' => 'success',

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 class NotionService
 {
     private const NOTION_API = 'https://api.notion.com/v1';
-    private const NOTION_VERSION = '2022-06-28';
+    private const NOTION_VERSION_LATEST = '2025-09-03';
 
     /**
      * ユーザーのNotionトークンの保存
@@ -55,6 +55,43 @@ class NotionService
     }
 
     /**
+     * Notionワークスペース直下に親ページを作成する
+     * @param string $accessToken ユーザーのNotionアクセストークン
+     * @param string $pageTitle ページタイトル
+     * @return string|null 作成されたページID。失敗時は null
+     */
+    public function createParentPage(string $accessToken, string $pageTitle = 'TechFeed'): ?string
+    {
+        $response = Http::withToken($accessToken)
+            ->withHeaders([
+                'Content-Type' => 'application/json',
+                'Notion-Version' => self::NOTION_VERSION_LATEST,
+            ])
+            ->post(self::NOTION_API . '/pages', [
+                'parent' => ['type' => 'workspace', 'workspace' => true],
+                'properties' => [
+                    'title' => [
+                        [
+                            'type' => 'text',
+                            'text' => ['content' => $pageTitle],
+                        ],
+                    ],
+                ],
+            ]);
+
+        if (!$response->successful()) {
+            Log::warning('Notion parent page creation failed', [
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+            return null;
+        }
+
+        $body = $response->json();
+        return $body['id'] ?? null;
+    }
+
+    /**
      * TechFeedデータベースに記事を1件追加する
      *
      * @param string $accessToken ユーザーのNotionアクセストークン
@@ -83,7 +120,7 @@ class NotionService
         $response = Http::withToken($accessToken)
             ->withHeaders([
                 'Content-Type' => 'application/json',
-                'Notion-Version' => self::NOTION_VERSION,
+                'Notion-Version' => self::NOTION_VERSION_LATEST,
             ])
             ->post(self::NOTION_API . '/pages', [
                 'parent' => ['database_id' => $databaseId],
@@ -104,12 +141,12 @@ class NotionService
         $response = Http::withToken($accessToken)
             ->withHeaders([
                 'Content-Type' => 'application/json',
-                'Notion-Version' => self::NOTION_VERSION,
+                'Notion-Version' => self::NOTION_VERSION_LATEST,
             ])
             ->post(self::NOTION_API . '/search', [
                 'query' => $title,
                 'filter' => ['property' => 'object', 'value' => 'database'],
-                'page_size' => 10,
+                'page_size' => 1,
             ]);
 
         if (!$response->successful()) {
@@ -119,28 +156,11 @@ class NotionService
         $data = $response->json();
         $results = $data['results'] ?? [];
 
-        foreach ($results as $item) {
-            $itemTitle = $this->extractDatabaseTitle($item);
-            if ($itemTitle !== null && $itemTitle === $title) {
-                return $item['id'] ?? null;
-            }
-        }
-
-        return null;
-    }
-
-    private function extractDatabaseTitle(array $item): ?string
-    {
-        $props = $item['title'] ?? $item['properties']['title'] ?? $item['properties']['Title'] ?? null;
-        if (!$props || !is_array($props)) {
-            return null;
-        }
-        $titleArray = $props['title'] ?? $props;
-        if (!is_array($titleArray) || empty($titleArray)) {
-            return null;
-        }
-        $first = $titleArray[0];
-        return $first['plain_text'] ?? $first['text']['content'] ?? null;
+        // query と filter で「タイトルに TechFeed を含む database」に絞っているため、
+        // 1件でも返っていればその id を返す。Search API のレスポンスでは properties が
+        // 省略されることがあるため、ここではタイトル再照合は行わない。
+        $first = $results[0] ?? null;
+        return $first !== null ? ($first['id'] ?? null) : null;
     }
 
     private function createDatabase(string $accessToken, string $parentPageId, string $title): ?string
@@ -148,7 +168,7 @@ class NotionService
         $response = Http::withToken($accessToken)
             ->withHeaders([
                 'Content-Type' => 'application/json',
-                'Notion-Version' => self::NOTION_VERSION,
+                'Notion-Version' => self::NOTION_VERSION_LATEST,
             ])
             ->post(self::NOTION_API . '/databases', [
                 'parent' => ['type' => 'page_id', 'page_id' => $this->normalizeNotionId($parentPageId)],
