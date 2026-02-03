@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Me;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ViewRequest;
 use App\Services\ViewService;
-use App\Http\Resources\HomeResource;
+use App\Http\Resources\ArticleResource;
 use Illuminate\Support\Facades\Log;
 
 
@@ -24,7 +24,7 @@ class MeViewController extends Controller
             $articles = $this->viewService->getViews($user, $page);
 
             return response()->json(
-                ['articles' => HomeResource::collection($articles)->response()->getData(true)],
+                ['articles' => ArticleResource::collection($articles)->response()->getData(true)],
             );
         } catch (\Exception $e) {
             Log::error($e);

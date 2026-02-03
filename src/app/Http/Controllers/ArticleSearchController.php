@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\SearchRequest;
 use App\Services\ArticleSearchService;
-use App\Http\Resources\HomeResource;
+use App\Http\Resources\ArticleResource;
 use Illuminate\Support\Facades\Log;
 
 
@@ -29,7 +29,7 @@ class ArticleSearchController extends Controller
             $articles = $this->articleSearchService->articleSearch($keyword, $category, $sort, $user, $page);
             
             return response()->json([
-                'articles' => HomeResource::collection($articles)->response()->getData(true),
+                'articles' => ArticleResource::collection($articles)->response()->getData(true),
             ]);
         } catch (\Exception $e) {
             Log::error($e);
