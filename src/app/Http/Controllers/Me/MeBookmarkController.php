@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Me;
 use App\Http\Controllers\Controller;
 use App\Services\BookmarkService;
 use App\Http\Requests\BookmarkRequest;
-use App\Http\Resources\HomeResource;
+use App\Http\Resources\ArticleResource;
 use Illuminate\Support\Facades\Log;
 
 class MeBookmarkController extends Controller
@@ -24,7 +24,7 @@ class MeBookmarkController extends Controller
             $articles = $this->bookmarkService->getBookmark($user, $page);
 
             return response()->json(
-                ['articles' => HomeResource::collection($articles)->response()->getData(true)],
+                ['articles' => ArticleResource::collection($articles)->response()->getData(true)],
             );
         } catch (\Exception $e) {
             Log::error($e);
