@@ -111,6 +111,9 @@ class NotionService
                     ['text' => ['content' => $titleContent]],
                 ],
             ],
+            'URL' => [
+                'url' => $article->url,
+            ],
         ];
 
         // データベースにURL・出典・カテゴリ・公開日などのプロパティがある場合はスキーマに依存するため、
@@ -175,8 +178,11 @@ class NotionService
                 'title' => [
                     ['type' => 'text', 'text' => ['content' => $title]],
                 ],
-                'properties' => [
-                    'Title' => ['title' => (object)[]],
+                'initial_data_source' => [
+                    'properties' => [
+                        'Title' => ['title' => (object)[]],
+                        'URL' => ['url' => (object)[]],
+                    ],
                 ],
             ]);
 
