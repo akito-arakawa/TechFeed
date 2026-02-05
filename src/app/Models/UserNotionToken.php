@@ -19,6 +19,7 @@ class UserNotionToken extends Model
         'notion_workspace_name',
         'notion_bot_id',
         'parent_page_id',
+        'database_id',
     ];
 
     protected $hidden = [
