@@ -17,9 +17,9 @@ class NotionService
      * @param array $response Notionの認証コールバックから取得したトークン情報
      * @param int $userId トークンを保存するユーザーID（callback は Bearer を送れないため state で特定した ID を渡す）
      */
-    public function saveToken(array $response, int $userId): void
+    public function saveToken(array $response, int $userId): UserNotionToken
     {
-        UserNotionToken::updateOrCreate(
+        return UserNotionToken::updateOrCreate(
             ['user_id' => $userId],
             [
                 'user_id' => $userId,

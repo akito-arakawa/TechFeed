@@ -15,10 +15,7 @@ class NotionController extends Controller
     public function __construct(
         private NotionService $notion_service,
         private NotionAuthService $notion_auth_service
-    ) {
-        $this->notion_service = $notion_service;
-        $this->notion_auth_service = $notion_auth_service;
-    }
+    ) {}
 
     public function output(NotionOutputRequest $request)
     {
@@ -124,10 +121,8 @@ class NotionController extends Controller
             return response()->json(['message' => 'TOKEN_EXCHANGE_FAILED'], 400);
         }
 
-        $this->notion_service->saveToken($response, $userId);
-
         // トークン保存後、親ページを作成してからデータベースを作成
-        $notionToken = UserNotionToken::find($userId);
+        $notionToken = $this->notion_service->saveToken($response, $userId);
         if (!$notionToken) {
             Log::error('Notion token not found after save', ['user_id' => $userId]);
             return response()->json(['message' => 'TOKEN_SAVE_FAILED'], 500);
