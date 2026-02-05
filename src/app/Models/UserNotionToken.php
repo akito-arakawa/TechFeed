@@ -12,12 +12,14 @@ class UserNotionToken extends Model
     public $incrementing = false;
 
     protected $fillable = [
+        'user_id',
         'access_token',
         'refresh_token',
         'notion_workspace_id',
         'notion_workspace_name',
         'notion_bot_id',
         'parent_page_id',
+        'database_id',
     ];
 
     protected $hidden = [
@@ -33,10 +35,5 @@ class UserNotionToken extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function hasParentPage(): bool
-    {
-        return filled($this->parent_page_id);
     }
 }
