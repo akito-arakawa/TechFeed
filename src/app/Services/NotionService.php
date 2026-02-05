@@ -101,9 +101,9 @@ class NotionService
      */
     public function addArticleToNotion(string $accessToken, string $databaseId, Article $article): array
     {
-        $article->load(['source', 'categories']);
+            $article->load(['source', 'categories']);
 
-        $titleContent = mb_substr($article->title, 0, 2000);
+            $titleContent = mb_substr($article->title, 0, 2000);
 
         $properties = [
             'Title' => [

@@ -32,6 +32,7 @@ Route::middleware('auth.token')->group(function () {
     Route::get('me/views', [MeViewController::class, 'index']);
     Route::get('articles/search', [ArticleSearchController::class, 'index']);
     Route::get('/notion/auth', [NotionController::class, 'auth']);
+    Route::post('/notion/output', [NotionController::class, 'output']);
 });
 
 Route::middleware('optional.auth')->group(function () {

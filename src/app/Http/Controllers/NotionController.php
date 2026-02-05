@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Services\NotionService;
 use App\Services\NotionAuthService;
 use App\Models\UserNotionToken;
+use App\Models\Article;
+use App\Http\Requests\NotionOutputRequest;
 use Illuminate\Support\Facades\Log;
 
 class NotionController extends Controller
@@ -18,26 +20,83 @@ class NotionController extends Controller
         $this->notion_auth_service = $notion_auth_service;
     }
 
-    public function auth(Request $request)
+    public function output(NotionOutputRequest $request)
     {
-        // notionの認証を行う
         $notionToken = $this->notion_auth_service->auth();
         if (!$notionToken) {
-            $state = $this->notion_auth_service->createStateForUser(auth()->user()->id);
-            $query = http_build_query([
-                'client_id' => config('services.notion.client_id'),
-                'response_type' => 'code',
-                'owner' => 'user',
-                'redirect_uri' => config('services.notion.redirect_uri'),
-                'state' => $state,
+            return response()->json(['message' => 'NOTION_NOT_CONNECTED'], 401);
+        }
+
+        // database_idが設定されていない場合
+        if (empty($notionToken->database_id)) {
+            Log::warning('Notion database_id is not set', [
+                'user_id' => $notionToken->user_id ?? null,
             ]);
-            $redirectUrl = "https://api.notion.com/v1/oauth/authorize?" . $query;
+            return response()->json(['message' => 'DATABASE_NOT_SET'], 400);
+        }
+
+        // バリデーション済みのarticle_idからArticleモデルを取得
+        $validated = $request->validated();
+        $article = Article::findOrFail($validated['article_id']);
+
+        try {
+            $result = $this->notion_service->addArticleToNotion(
+                $notionToken->access_token,
+                $notionToken->database_id,
+                $article
+            );
+
+            if (!$result['ok']) {
+                Log::warning('Failed to add article to Notion', [
+                    'user_id' => $notionToken->user_id ?? null,
+                    'article_id' => $article->id,
+                    'error' => $result['error'] ?? 'unknown',
+                    'body' => $result['body'] ?? null,
+                ]);
+                return response()->json([
+                    'message' => 'NOTION_CREATE_FAILED',
+                    'error' => $result['error'] ?? 'unknown',
+                ], 500);
+            }
+
+            Log::info('Article added to Notion successfully', [
+                'user_id' => $notionToken->user_id ?? null,
+                'article_id' => $article->id,
+                'page_id' => $result['page_id'] ?? null,
+            ]);
 
             return response()->json([
-                'message' => 'NOTION_NOT_CONNECTED',
-                'redirectUrl' => $redirectUrl,
-            ], 401);
+                'message' => 'SUCCESS',
+                'page_id' => $result['page_id'] ?? null,
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Exception occurred while adding article to Notion', [
+                'user_id' => $notionToken->user_id ?? null,
+                'article_id' => $article->id ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['message' => 'INTERNAL_SERVER_ERROR'], 500);
         }
+    }
+
+    public function auth()
+    {
+        // notionの認証を行う
+        $state = $this->notion_auth_service->createStateForUser(auth()->user()->id);
+        $query = http_build_query([
+            'client_id' => config('services.notion.client_id'),
+            'response_type' => 'code',
+            'owner' => 'user',
+            'redirect_uri' => config('services.notion.redirect_uri'),
+            'state' => $state,
+        ]);
+        $redirectUrl = "https://api.notion.com/v1/oauth/authorize?" . $query;
+
+        return response()->json([
+            'message' => 'NOTION_NOT_CONNECTED',
+            'redirectUrl' => $redirectUrl,
+        ], 401);
     }
 
     public function callback(Request $request)
@@ -108,6 +167,8 @@ class NotionController extends Controller
             );
 
             if ($databaseId !== null) {
+                $notionToken->database_id = $databaseId;
+                $notionToken->save();
                 Log::info('Notion database created or found', [
                     'user_id' => $userId,
                     'database_id' => $databaseId,
@@ -127,6 +188,7 @@ class NotionController extends Controller
             ]);
         }
 
+        // レスポンスはフロントのhomeに遷移させる
         return response()->json([
             'message' => 'success',
         ], 200);
