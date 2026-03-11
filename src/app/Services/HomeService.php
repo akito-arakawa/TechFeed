@@ -3,7 +3,7 @@
 namespace App\Services;
 use App\Models\Article;
 use App\Models\UserBookmark;
-use App\Http\Resources\HomeResource;
+use App\Http\Resources\ArticleResource;
 
 class HomeService
 {
@@ -93,7 +93,7 @@ class HomeService
             $fallback = $this->getBaseArticleQuery($user)
                 ->whereNotIn('id', $fallbackExcludedIds)
                 ->orderByDesc('published_at')
-                ->limit(3 - $articles->count())
+                ->limit($limit - $articles->count())
                 ->get();
 
             $articles = $articles->merge($fallback);
@@ -126,6 +126,6 @@ class HomeService
 
     public function formatArticleList($articles)
     {
-        return HomeResource::collection($articles);
+        return ArticleResource::collection($articles);
     }
 }
