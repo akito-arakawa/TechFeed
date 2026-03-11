@@ -2,11 +2,11 @@ openapi: "3.0.3"
 
 info:
   title: "TechFeed API"
-  description: "TechFeedのAPI仕様書"
+  description: "TechFeedのAPI仕様書（実装済みAPI）"
   version: "1.0.0"
 
 servers:
-  - url: http://localhost:8001/api/v1
+  - url: http://localhost:8001/api
     description: Local server
 
 tags:
@@ -15,6 +15,8 @@ tags:
   - name: article
   - name: category
   - name: mypage
+  - name: notion
+
 paths:
   "/signup":
     post:
@@ -23,7 +25,7 @@ paths:
       summary: 新規登録
       description: |
         ユーザの新規登録を行う。
-        登録に成功した場合は自動でログインを行う。
+        登録に成功した場合はトークンを返却する。
       requestBody:
         $ref: "#/components/requestBodies/PostSignupPayload"
       responses:
@@ -39,14 +41,15 @@ paths:
         - authentication
       summary: ログイン
       description: |
-        ユーザのログイン処理を行い、セッションを確立する
+        ユーザのログイン処理を行い、トークンを発行する。
+        Authorization: Bearer ヘッダーでトークンを送信して認証する。
       requestBody:
         $ref: "#/components/requestBodies/PostLoginPayload"
       responses:
         200:
           $ref: "#/components/responses/PostLoginResponse"
-        400:
-          $ref: "#/components/responses/PostLogin400Response"
+        401:
+          $ref: "#/components/responses/PostLogin401Response"
         500:
           $ref: "#/components/responses/ServerError"
   "/logout":
@@ -54,14 +57,14 @@ paths:
       tags:
         - authentication
       summary: ログアウト
-      description: ユーザとのセッションを破棄する
+      description: ユーザのトークンを無効化する
       security:
-        - ApiKeyAuth: []
+        - BearerAuth: []
       responses:
-        200: 
-          $ref: "#/components/responses/Success"
-        400:
-          $ref: "#/components/responses/BadRequest"
+        200:
+          $ref: "#/components/responses/LogoutResponse"
+        401:
+          $ref: "#/components/responses/Unauthorized"
         500:
           $ref: "#/components/responses/ServerError"
   "/home":
@@ -83,208 +86,295 @@ paths:
           description: 表示するセクション（recommended=おすすめ, popular=人気, new=新着）
           required: false
       responses:
-        200: 
+        200:
           $ref: "#/components/responses/GetHome200Response"
-        400:
-          $ref: "#/components/responses/BadRequest"
         500:
           $ref: "#/components/responses/ServerError"
   "/articles/search":
-    get: 
+    get:
       tags:
         - article
-      summary: 検索画面
-      description: 自分の見たい記事を検索で絞り込みができる
-      parameters: 
+      summary: 記事検索
+      description: キーワード・カテゴリ・ソートで記事を絞り込み検索する。認証必須。
+      security:
+        - BearerAuth: []
+      parameters:
         - in: query
           name: keyword
-          schema: { type: string, minLength: 0}
+          schema: { type: string }
           description: 検索文字列
           required: false
         - in: query
           name: category
-          schema: { type: string, minLength: 0, default: all}
-          description: カテゴリ検索
+          schema: { type: string, default: all }
+          description: カテゴリスラッグ（all または categories の slug）
           required: false
         - in: query
           name: sort
-          schema: { type: string, minLength: 0, default: postDate}
-          description: |
-            投稿日orいいね<br>
-            投稿日の場合はpostDateで、いいねの場合はlikeでソート
+          schema: { type: string, enum: [postDate, like], default: postDate }
+          description: ソート順（postDate=投稿日, like=いいね数）
+          required: false
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+          description: ページ番号（1始まり）
           required: false
       responses:
         200:
-          $ref: "#/components/responses/GetArticles200Response"
-        400:
-          $ref: "#/components/responses/BadRequest"
+          $ref: "#/components/responses/GetArticlesSearch200Response"
+        401:
+          $ref: "#/components/responses/Unauthorized"
         500:
           $ref: "#/components/responses/ServerError"
-
-  "/articles/{id}/like":
+  "/articles/{article}/bookmark":
     post:
-      tags: 
+      tags:
         - article
-      summary: いいねする
-      description: いいね機能
+      summary: ブックマーク登録
+      description: 記事をブックマークに追加する
       security:
-        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: article
+          required: true
+          schema: { type: integer }
+          description: 記事ID
       responses:
-        200: 
-          $ref: "#/components/responses/Success"
-        400:
-          $ref: "#/components/responses/BadRequest"
+        200:
+          $ref: "#/components/responses/BookmarkResponse"
+        401:
+          $ref: "#/components/responses/Unauthorized"
         500:
           $ref: "#/components/responses/ServerError"
     delete:
       tags:
         - article
-      summary: いいね解除
-      description: いいね解除機能
+      summary: ブックマーク解除
+      description: 記事のブックマークを解除する
       security:
-        - ApiKeyAuth: []
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: article
+          required: true
+          schema: { type: integer }
+          description: 記事ID
       responses:
-        200: 
-          $ref: "#/components/responses/Success"
-        400:
-          $ref: "#/components/responses/BadRequest"
+        200:
+          $ref: "#/components/responses/BookmarkResponse"
+        204:
+          description: ブックマークが存在しない場合
+        401:
+          $ref: "#/components/responses/Unauthorized"
         500:
           $ref: "#/components/responses/ServerError"
-  "/articles/{id}/view":
-    post: 
+  "/articles/{article}/view":
+    post:
       tags:
         - article
       summary: 閲覧記録
-      description: 閲覧記録
+      description: 記事の閲覧履歴を記録する。認証必須。
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: article
+          required: true
+          schema: { type: integer }
+          description: 記事ID
       responses:
-        200: 
+        200:
           $ref: "#/components/responses/Success"
-        400:
-          $ref: "#/components/responses/BadRequest"
+        401:
+          $ref: "#/components/responses/Unauthorized"
         500:
           $ref: "#/components/responses/ServerError"
   "/categories":
-    get: 
+    get:
       tags:
         - category
       summary: カテゴリ一覧
-      description: カテゴリを一覧表示。(Javascript, Java)
+      description: カテゴリを一覧表示する
       responses:
-        200: 
+        200:
           $ref: "#/components/responses/GetCategory200Response"
-        400:
-          $ref: "#/components/responses/BadRequest"
         500:
           $ref: "#/components/responses/ServerError"
   "/categories/{slug}":
     get:
       tags:
         - category
-      summary: カテゴリごとの記事一覧表示
-      description: カテゴリごとの一覧表示
-      parameters: 
+      summary: カテゴリごとの記事一覧
+      description: 指定カテゴリの記事一覧を取得する
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+          description: カテゴリスラッグ
         - in: query
           name: page
-          schema: { type: integer, minimum: 0, default: 0}
-          description: 0始まりのページ
-      responses:
-        200: 
-          $ref: "#/components/responses/GetArticles200Response"
-        400:
-          $ref: "#/components/responses/BadRequest"
-        500:
-          $ref: "#/components/responses/ServerError"
-  "/me/likes":
-    get:
-      tags: 
-        - mypage
-      summary: 自分のいいね一覧
-      security:
-        - ApiKeyAuth: []
-      parameters: 
-        - in: query
-          name: page
-          schema: { type: integer, minimum: 0, default: 0}
-          description: 0始まりのページ
+          schema: { type: integer, minimum: 1, default: 1 }
+          description: ページ番号（1始まり）
+          required: false
       responses:
         200:
-          $ref: "#/components/responses/GetArticles200Response"
-        400:
-          $ref: "#/components/responses/BadRequest"
+          $ref: "#/components/responses/GetCategoryArticles200Response"
+        404:
+          description: カテゴリが見つからない
         500:
           $ref: "#/components/responses/ServerError"
-  "/me/views":
-    get: 
-      tags: 
+  "/me/bookmarks":
+    get:
+      tags:
         - mypage
-      summary: 自分の閲覧履歴
+      summary: 自分のブックマーク一覧
       security:
-        - ApiKeyAuth: []
+        - BearerAuth: []
       parameters:
         - in: query
           name: page
-          schema: { type: integer, minimum: 0, default: 0}
-          description: 0始まりのページ
+          schema: { type: integer, minimum: 1, default: 1 }
+          description: ページ番号（1始まり）
+          required: false
       responses:
-        200: 
-          $ref: "#/components/responses/GetArticles200Response"
-        400:
-          $ref: "#/components/responses/BadRequest"
+        200:
+          $ref: "#/components/responses/GetArticlesList200Response"
+        401:
+          $ref: "#/components/responses/Unauthorized"
         500:
           $ref: "#/components/responses/ServerError"
-      
+  "/me/views":
+    get:
+      tags:
+        - mypage
+      summary: 自分の閲覧履歴
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+          description: ページ番号（1始まり）
+          required: false
+      responses:
+        200:
+          $ref: "#/components/responses/GetArticlesList200Response"
+        401:
+          $ref: "#/components/responses/Unauthorized"
+        500:
+          $ref: "#/components/responses/ServerError"
+  "/notion/auth":
+    get:
+      tags:
+        - notion
+      summary: Notion認証URL取得
+      description: |
+        Notion連携が未設定の場合、OAuth認証用のURLを返す。
+        クライアントは redirectUrl にリダイレクトして認証を完了する。
+      security:
+        - BearerAuth: []
+      responses:
+        401:
+          $ref: "#/components/responses/NotionAuth401Response"
+  "/notion/output":
+    post:
+      tags:
+        - notion
+      summary: 記事をNotionに出力
+      description: 指定した記事をNotionデータベースに追加する
+      security:
+        - BearerAuth: []
+      requestBody:
+        $ref: "#/components/requestBodies/NotionOutputPayload"
+      responses:
+        200:
+          $ref: "#/components/responses/NotionOutput200Response"
+        400:
+          $ref: "#/components/responses/NotionOutput400Response"
+        401:
+          $ref: "#/components/responses/NotionOutput401Response"
+        404:
+          description: 記事が見つからない
+        500:
+          $ref: "#/components/responses/NotionOutput500Response"
+  "/notion/callback":
+    get:
+      tags:
+        - notion
+      summary: Notion OAuthコールバック
+      description: |
+        Notion OAuth認証完了後のコールバックエンドポイント。
+        クエリパラメータ state, code を受け取りトークンを保存する。
+      parameters:
+        - in: query
+          name: state
+          required: true
+          schema: { type: string }
+        - in: query
+          name: code
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          $ref: "#/components/responses/Success"
+        400:
+          description: state/code不正、トークン取得失敗など
+
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "ログイン/サインアップで取得したトークンを Bearer トークンとして送信"
   schemas:
-    SuccessMessage: 
+    SuccessMessage:
       type: string
-      description: レスポンスを空にしないようにするため
-      nullable: false
+      description: レスポンスメッセージ
       example: success
     Token:
       type: string
-      description: トークン
-      nullable: false
+      description: "認証トークン（Authorization: Bearer で使用）"
       example: eA342fre34fe21ffse
-    LoginId:
+    Name:
       type: string
-      description: |
-        ユーザID
-        - 1文字以上15文字以下
-        - 半角英数字のみ使用可能
+      description: ユーザー名（1〜15文字）
       minLength: 1
       maxLength: 15
-      pattern: ^[0-9a-zA-Z_]{1, 15}$
-      nullable: false
-      example: example
+      example: username
     Email:
       type: string
       description: メールアドレス
-      nullable: false
-      format: email              
+      format: email
       maxLength: 254
-      pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
       example: example@example.com
     Password:
       type: string
-      description: |
-        パスワード
-        - 8文字以上
-        - 半角英数字が使用可能
+      description: パスワード（8文字以上、半角英数字）
       pattern: ^[a-zA-Z0-9]{8,}$
       minLength: 8
-      nullable: false
-      example: passowrd
+      example: password123
+    User:
+      type: object
+      description: ユーザー情報
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
     Error:
       type: object
       properties:
         code:
           type: string
           description: エラーコード
-          nullable: false
         description:
           type: string
           description: エラーメッセージ
-          nullable: false
       required:
         - code
         - description
@@ -292,19 +382,17 @@ components:
       type: string
       enum: [recommended, popular, new]
       example: popular
-    Title:
-      type: string
-      example: 人気記事
     Section:
       type: object
       properties:
-        key: 
+        key:
           $ref: "#/components/schemas/Key"
         title:
-          $ref: "#/components/schemas/Title"
-        items: 
+          type: string
+          example: 人気記事
+        items:
           type: array
-          items: 
+          items:
             $ref: "#/components/schemas/Article"
     Article:
       type: object
@@ -312,66 +400,142 @@ components:
         id:
           type: integer
           example: 123
-        title: 
+        title:
           type: string
           example: React 18の新機能まとめ
-        summary:
-          type: string
-          example: React 18の新機能まとめ解説
-        url:
-          type: string
-          format: uri
-          example: https://zenn.dev/articles/react18-feature
         source:
           type: object
           properties:
-            id: 
+            id:
               type: integer
-              example: 2
-            name: 
+            name:
               type: string
-              example: Zenn
-        thumbnaiUrl:
+        thumbnailUrl:
           type: string
           format: uri
-          example: https://zenn.dev/ogp/react18.png
+          nullable: true
         categories:
           type: array
           items:
-            type: string
-          example: ["React", "JavaScript"]
+            type: object
+            properties:
+              name:
+                type: string
         likeCount:
           type: integer
-          example: 120
           nullable: true
-        userState:
-          type: object
-          nullable: true
-          properties:
-            liked: { type: boolean }
-            saved: { type: boolean }
+        bookmarked:
+          type: boolean
+          description: ログイン時のみ。ブックマーク済みかどうか
         publishedAt:
           type: string
           format: date-time
-    Categories:
+      example:
+        id: 123
+        title: React 18の新機能まとめ
+        source:
+          id: 2
+          name: Zenn
+        thumbnailUrl: https://zenn.dev/images/ogp/react18.png
+        categories:
+          - name: React
+          - name: JavaScript
+        likeCount: 120
+        bookmarked: false
+        publishedAt: "2025-10-05T12:00:00.000000Z"
+    Category:
       type: object
       properties:
-        id: 
-          $ref: "#/components/schemas/CategoryId"
+        id:
+          type: integer
         name:
-          $ref: "#/components/schemas/CategoryName"
+          type: string
         slug:
-          $ref: "#/components/schemas/CategorySlug"
-    CategoryId:
-      type: string
-      example: 1
-    CategoryName: 
-      type: string
-      example: JavaScript
-    CategorySlug:
-      type: string
-      example: javascript
-          
+          type: string
+        iconUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: カテゴリアイコンURL
+    PaginatedArticles:
+      type: object
+      description: Laravel Paginator形式の記事一覧
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Article"
+        links:
+          type: object
+          properties:
+            first:
+              type: string
+            last:
+              type: string
+            prev:
+              type: string
+              nullable: true
+            next:
+              type: string
+              nullable: true
+        meta:
+          type: object
+          properties:
+            current_page:
+              type: integer
+            from:
+              type: integer
+              nullable: true
+            last_page:
+              type: integer
+            path:
+              type: string
+            per_page:
+              type: integer
+            to:
+              type: integer
+              nullable: true
+            total:
+              type: integer
+      example:
+        data:
+          - id: 123
+            title: React 18の新機能まとめ
+            source:
+              id: 2
+              name: Zenn
+            thumbnailUrl: https://zenn.dev/images/ogp/react18.png
+            categories:
+              - name: React
+              - name: JavaScript
+            likeCount: 120
+            bookmarked: false
+            publishedAt: "2025-10-05T12:00:00.000000Z"
+          - id: 124
+            title: TypeScript 5.0の変更点
+            source:
+              id: 2
+              name: Zenn
+            thumbnailUrl: https://zenn.dev/images/ogp/ts5.png
+            categories:
+              - name: TypeScript
+            likeCount: 85
+            bookmarked: true
+            publishedAt: "2025-10-04T09:30:00.000000Z"
+        links:
+          first: "http://localhost:8001/api/articles/search?page=1"
+          last: "http://localhost:8001/api/articles/search?page=3"
+          prev: null
+          next: "http://localhost:8001/api/articles/search?page=2"
+        meta:
+          current_page: 1
+          from: 1
+          last_page: 3
+          path: "http://localhost:8001/api/articles/search"
+          per_page: 15
+          to: 15
+          total: 42
+
   requestBodies:
     PostSignupPayload:
       content:
@@ -379,170 +543,365 @@ components:
           schema:
             type: object
             properties:
-              login_id:
-                $ref: "#/components/schemas/LoginId"
+              name:
+                $ref: "#/components/schemas/Name"
               email:
                 $ref: "#/components/schemas/Email"
               password:
                 $ref: "#/components/schemas/Password"
             required:
-              - login_id
+              - name
               - email
-              - passowrd
+              - password
     PostLoginPayload:
       content:
         application/json:
-          schema: 
+          schema:
             type: object
             properties:
-              login_id:
-                $ref: "#/components/schemas/LoginId"
+              email:
+                $ref: "#/components/schemas/Email"
               password:
                 $ref: "#/components/schemas/Password"
             required:
-              - login_id
+              - email
               - password
-  responses:
-    Success:
-      description: success
+    NotionOutputPayload:
       content:
         application/json:
-          schema: 
+          schema:
+            type: object
+            properties:
+              article_id:
+                type: integer
+                description: 記事ID
+            required:
+              - article_id
+
+  responses:
+    Success:
+      description: 成功
+      content:
+        application/json:
+          schema:
             type: object
             properties:
               message:
-                $ref: "#/components/schemas/SuccessMessage"
-            required:
-              - message
+                type: string
+                example: success
+    LogoutResponse:
+      description: ログアウト成功
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: ok
+    BookmarkResponse:
+      description: ブックマーク操作成功
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: ok
+    Unauthorized:
+      description: 認証エラー（トークンなし、無効、期限切れ）
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Token missing
     PostSignupResponse:
-      description: OK
+      description: 登録成功
       content:
         application/json:
           schema:
             type: object
             properties:
-              Token:
+              token:
                 $ref: "#/components/schemas/Token"
-            required:
-              - Token
     PostSignup400Response:
-      description: |
-        Bad Request
-        ※ examples には返却されうるエラー例を示す。実際には条件に一致したエラーのみ返却。
+      description: バリデーションエラー
       content:
         application/json:
           schema:
             type: object
             properties:
               errors:
-                type: array
-                items: 
-                  $ref: "#/components/schemas/Error"
-                example:
-                  - code: post_signup_id_already_used
-                    description: 既に使用されているIDです
-                  - code: post_signup_id_invalid_length
-                    description: 半角英数1〜15文字以内で入力してください
-                  - code: post_signup_id_invalid_characters
-                    description: 半角英数以外は使用できません
-                  - code: post_signup_password_invalid_length
-                    description: 半角英数8以上で入力してください
-                  - code: post_signup_password_invalid_characters
-                    description: そのパスワードは使用できません
-                  - code: post_signup_email_invalid_format
-                    description: メールアドレスの形式が不正です 
-            required:
-              - errors
+                type: object
+                description: フィールド名をキーとしたエラーメッセージ
     PostLoginResponse:
-      description: OK
+      description: ログイン成功
       content:
         application/json:
-          schema: 
+          schema:
             type: object
             properties:
-              Token:
+              token:
                 $ref: "#/components/schemas/Token"
-            required:
-              - Token
-    PostLogin400Response:
-      description: |
-        Bad Request
-        ※ 常にexmapleの内容を返す
+              user:
+                $ref: "#/components/schemas/User"
+    PostLogin401Response:
+      description: 認証失敗（メールまたはパスワードが不正）
       content:
         application/json:
-          schema: 
+          schema:
             type: object
             properties:
-              errors:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Error"
-                example:
-                  - code: Invalid_id_or_password    
-                    description: IDまたはpasswordが違います
-            required:
-              - errors
+              message:
+                type: string
+                example: Invalid credentials
     GetHome200Response:
-      description: ホーム画面データの取得成功
+      description: ホーム画面データ
       content:
         application/json:
-          schema: 
+          schema:
             type: object
             properties:
               serverTime:
                 type: string
                 format: date-time
-                example: "2025-10-05T12:00:00Z"
-              sections: 
+              sections:
                 type: array
-                description: セクションごとの記事リスト
                 items:
                   $ref: "#/components/schemas/Section"
     GetCategory200Response:
-      description: カテゴリ画面データを取得成功
+      description: カテゴリ一覧
       content:
         application/json:
-          schema: 
+          schema:
             type: object
             properties:
               categories:
                 type: array
-                description: カテゴリ一覧を返す
                 items:
-                  $ref: "#/components/schemas/Categories"
-    GetArticles200Response:
-      description: 記事一覧返却
+                  $ref: "#/components/schemas/Category"
+    GetArticlesSearch200Response:
+      description: 検索結果（記事一覧）
       content:
         application/json:
           schema:
             type: object
             properties:
-              serverTime:
+              articles:
+                $ref: "#/components/schemas/PaginatedArticles"
+          example:
+            articles:
+              data:
+                - id: 123
+                  title: React 18の新機能まとめ
+                  source:
+                    id: 2
+                    name: Zenn
+                  thumbnailUrl: https://zenn.dev/images/ogp/react18.png
+                  categories:
+                    - name: React
+                    - name: JavaScript
+                  likeCount: 120
+                  bookmarked: false
+                  publishedAt: "2025-10-05T12:00:00.000000Z"
+                - id: 124
+                  title: TypeScript 5.0の変更点
+                  source:
+                    id: 2
+                    name: Zenn
+                  thumbnailUrl: https://zenn.dev/images/ogp/ts5.png
+                  categories:
+                    - name: TypeScript
+                  likeCount: 85
+                  bookmarked: true
+                  publishedAt: "2025-10-04T09:30:00.000000Z"
+              links:
+                first: "http://localhost:8001/api/articles/search?page=1"
+                last: "http://localhost:8001/api/articles/search?page=3"
+                prev: null
+                next: "http://localhost:8001/api/articles/search?page=2"
+              meta:
+                current_page: 1
+                from: 1
+                last_page: 3
+                path: "http://localhost:8001/api/articles/search"
+                per_page: 15
+                to: 15
+                total: 42
+    GetArticlesList200Response:
+      description: 記事一覧（ブックマーク/閲覧履歴）
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              articles:
+                $ref: "#/components/schemas/PaginatedArticles"
+          example:
+            articles:
+              data:
+                - id: 123
+                  title: React 18の新機能まとめ
+                  source:
+                    id: 2
+                    name: Zenn
+                  thumbnailUrl: https://zenn.dev/images/ogp/react18.png
+                  categories:
+                    - name: React
+                    - name: JavaScript
+                  likeCount: 120
+                  bookmarked: true
+                  publishedAt: "2025-10-05T12:00:00.000000Z"
+                - id: 125
+                  title: Laravel 11の新機能
+                  source:
+                    id: 2
+                    name: Zenn
+                  thumbnailUrl: null
+                  categories:
+                    - name: PHP
+                  likeCount: 56
+                  bookmarked: true
+                  publishedAt: "2025-10-03T14:00:00.000000Z"
+              links:
+                first: "http://localhost:8001/api/me/bookmarks?page=1"
+                last: "http://localhost:8001/api/me/bookmarks?page=1"
+                prev: null
+                next: null
+              meta:
+                current_page: 1
+                from: 1
+                last_page: 1
+                path: "http://localhost:8001/api/me/bookmarks"
+                per_page: 15
+                to: 2
+                total: 2
+    GetCategoryArticles200Response:
+      description: カテゴリ記事一覧
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              category:
+                $ref: "#/components/schemas/Category"
+              articles:
+                $ref: "#/components/schemas/PaginatedArticles"
+          example:
+            category:
+              id: 1
+              name: JavaScript
+              slug: javascript
+              iconUrl: null
+            articles:
+              data:
+                - id: 123
+                  title: React 18の新機能まとめ
+                  source:
+                    id: 2
+                    name: Zenn
+                  thumbnailUrl: https://zenn.dev/images/ogp/react18.png
+                  categories:
+                    - name: React
+                    - name: JavaScript
+                  likeCount: 120
+                  bookmarked: false
+                  publishedAt: "2025-10-05T12:00:00.000000Z"
+                - id: 126
+                  title: Vue 3 Composition API入門
+                  source:
+                    id: 2
+                    name: Zenn
+                  thumbnailUrl: null
+                  categories:
+                    - name: Vue
+                    - name: JavaScript
+                  likeCount: 95
+                  bookmarked: false
+                  publishedAt: "2025-10-02T10:00:00.000000Z"
+              links:
+                first: "http://localhost:8001/api/categories/javascript?page=1"
+                last: "http://localhost:8001/api/categories/javascript?page=2"
+                prev: null
+                next: "http://localhost:8001/api/categories/javascript?page=2"
+              meta:
+                current_page: 1
+                from: 1
+                last_page: 2
+                path: "http://localhost:8001/api/categories/javascript"
+                per_page: 15
+                to: 15
+                total: 18
+    NotionAuth401Response:
+      description: Notion未連携
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
                 type: string
-                format: date-time
-                example: "2025-10-05T12:00:00Z"
-              items:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Article"
-    
-       
-    BadRequest:
-      description: 不正なリクエスト時に返す。汎用的エラー
+                example: NOTION_NOT_CONNECTED
+              redirectUrl:
+                type: string
+                format: uri
+    NotionOutput200Response:
+      description: Notion出力成功
       content:
         application/json:
           schema:
             type: object
             properties:
-              errors:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Error"
-                example:
-                  - code: invalid
-                    description: リクエストが不正です
+              message:
+                type: string
+                example: SUCCESS
+              page_id:
+                type: string
+                nullable: true
+    NotionOutput400Response:
+      description: データベース未設定など
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: DATABASE_NOT_SET
+    NotionOutput401Response:
+      description: Notion未連携
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: NOTION_NOT_CONNECTED
+    NotionOutput500Response:
+      description: Notion APIエラー、内部エラー
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: NOTION_CREATE_FAILED
+              error:
+                type: string
+                nullable: true
     ServerError:
-      description: サーバー側のエラーです
-
-            
-    
+      description: サーバーエラー
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: サーバーエラーが発生しました。
