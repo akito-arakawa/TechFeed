@@ -10,11 +10,18 @@ class HomeController extends Controller
         private HomeService $homeService
     ) {}
 
-    public function index(){
+    public function index()
+    {
         $user = auth()->user();
+        $section = request()->query('section', 'recommended');
+
+        $validSections = ['recommended', 'popular', 'new'];
+        if (!in_array($section, $validSections)) {
+            $section = 'recommended';
+        }
 
         return response()->json(
-            $this->homeService->getHome($user)
+            $this->homeService->getHome($user, $section)
         );
     }
 }

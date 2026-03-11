@@ -70,8 +70,18 @@ paths:
         - home
       summary: ホーム画面
       description: |
-        おすすめ記事・人気記事・最新記事が参照できる。<br>
-        ログインすると記事にいい値が付けれたり、自分に合った記事がおすすめ記事に流れてくる(ログインしていないユーザは人気記事を被らないようにおすすめ記事を表示)
+        おすすめ記事・人気記事・新着記事が参照できる。
+        ログインするとブックマーク状態が反映され、自分に合った記事がおすすめに表示される。
+        sectionパラメータで表示するタブを切り替え可能。未指定時はおすすめ。
+      parameters:
+        - in: query
+          name: section
+          schema:
+            type: string
+            enum: [recommended, popular, new]
+            default: recommended
+          description: 表示するセクション（recommended=おすすめ, popular=人気, new=新着）
+          required: false
       responses:
         200: 
           $ref: "#/components/responses/GetHome200Response"

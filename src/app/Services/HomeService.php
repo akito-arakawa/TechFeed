@@ -7,31 +7,38 @@ use App\Http\Resources\ArticleResource;
 
 class HomeService
 {
-    public function getHome($user)
+    public function getHome($user, string $section = 'recommended')
     {
-        $popular = $this->getPopularArticles($user);
-        $latest = $this->getNewArticles($user);
-        $recommended = $this->getRecommendedArticles($user, $popular, $latest);
+        $popular = $section === 'popular' ? $this->getPopularArticles($user) : null;
+        $latest = $section === 'new' ? $this->getNewArticles($user) : null;
+
+        if ($section === 'recommended') {
+            $popular ??= $this->getPopularArticles($user);
+            $latest ??= $this->getNewArticles($user);
+            $recommended = $this->getRecommendedArticles($user, $popular, $latest);
+        }
+
+        $sections = match ($section) {
+            'popular' => [[
+                'key' => config('home.sections.popular.key'),
+                'title' => config('home.sections.popular.title'),
+                'items' => $popular,
+            ]],
+            'new' => [[
+                'key' => config('home.sections.new.key'),
+                'title' => config('home.sections.new.title'),
+                'items' => $latest,
+            ]],
+            default => [[
+                'key' => config('home.sections.recommended.key'),
+                'title' => config('home.sections.recommended.title'),
+                'items' => $recommended,
+            ]],
+        };
 
         return [
             'serverTime' => now()->toISOString(),
-            'sections' => [
-                [
-                    'key' => config('home.sections.recommended.key'),
-                    'title' => config('home.sections.recommended.title'),
-                    'items' => $recommended,
-                ],
-                [
-                    'key' => config('home.sections.popular.key'),
-                    'title' => config('home.sections.popular.title'),
-                    'items' => $popular,
-                ],
-                [
-                    'key' => config('home.sections.new.key'),
-                    'title' => config('home.sections.new.title'),
-                    'items' => $latest,
-                ],
-            ],
+            'sections' => $sections,
         ];
     }
 
